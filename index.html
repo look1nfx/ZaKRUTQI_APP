@@ -356,13 +356,14 @@
   }
   .point-dot{
     position:absolute;
-    width:26px;height:26px;
+    width:30px;height:30px;
     border-radius:50%;
     transform:translate(-50%,-50%);
     background:#12200f;
     border:2px solid var(--panel-border);
     pointer-events:none;
     transition:background .15s,border-color .15s;
+    z-index:3;
   }
   .point-dot .ring{
     position:absolute;
@@ -371,19 +372,33 @@
     border:3px solid var(--accent-2);
     opacity:0;
   }
+  .point-dot .pulse{
+    position:absolute;
+    inset:-14px;
+    border-radius:50%;
+    background:radial-gradient(circle, rgba(255,202,40,.55) 0%, rgba(255,202,40,.25) 55%, rgba(255,202,40,0) 75%);
+    opacity:0;
+    pointer-events:none;
+  }
   .point-dot.active{
     pointer-events:auto;
-    background:rgba(255,202,40,.3);
+    background:rgba(255,202,40,.35);
     border-color:var(--accent-2);
-    box-shadow:0 0 10px rgba(255,202,40,.65);
+    box-shadow:0 0 14px rgba(255,202,40,.75);
     cursor:pointer;
   }
   .point-dot.active .ring{ opacity:1; }
+  .point-dot.active .pulse{ opacity:1; }
   .point-dot.hit{ background:rgba(139,195,74,.4); border-color:var(--accent); }
   .point-dot.miss{ background:rgba(224,92,92,.4); border-color:var(--danger); }
   @keyframes shrinkRing{
     from{ transform:scale(1); opacity:1; }
     to{ transform:scale(.1); opacity:0; }
+  }
+  @keyframes shrinkDot{
+    0%{ transform:scale(2.3); opacity:.95; }
+    60%{ transform:scale(1.1); opacity:.7; }
+    100%{ transform:scale(.15); opacity:0; }
   }
   .wrench-icon{
     position:absolute;
@@ -429,6 +444,40 @@
   .key-overlay .big-emoji{ font-size:34px; }
   .key-overlay .kt{ font-weight:800; font-size:15px; }
   .key-overlay .ks{ font-size:12px; color:var(--text-dim); }
+  .countdown-overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(14,22,16,.55);
+    border-radius:20px;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:11;
+  }
+  .countdown-overlay.show{ display:flex; }
+  .countdown-num{
+    font-size:64px;
+    font-weight:900;
+    color:var(--accent-2);
+    text-shadow:0 0 20px rgba(255,202,40,.7);
+  }
+  @keyframes countPulse{
+    0%{ transform:scale(1.7); opacity:0; }
+    30%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(.85); opacity:0; }
+  }
+  .jar-stage.jar-exit{ animation:jarExit .42s ease-in forwards; }
+  .jar-stage.jar-enter{ animation:jarEnter .42s ease-out forwards; }
+  @keyframes jarExit{
+    0%{ transform:scale(1) rotate(0deg); opacity:1; }
+    40%{ transform:scale(1.08) rotate(-4deg); opacity:1; }
+    100%{ transform:scale(.4) rotate(8deg) translateY(40px); opacity:0; }
+  }
+  @keyframes jarEnter{
+    0%{ transform:scale(.4) rotate(-8deg) translateY(40px); opacity:0; }
+    60%{ transform:scale(1.06) rotate(2deg) translateY(0); opacity:1; }
+    100%{ transform:scale(1) rotate(0deg); opacity:1; }
+  }
   .hint{
     margin-top:14px;
     font-size:13px;
@@ -859,6 +908,10 @@
             <div class="ks">Потрібен новий ключ, щоб продовжити</div>
             <button class="cta-btn" id="newKeyBtn">Взяти новий ключ</button>
           </div>
+
+          <div class="countdown-overlay" id="countdownOverlay">
+            <div class="countdown-num" id="countdownNum">3</div>
+          </div>
         </div>
 
         <div class="hint" id="hint">Тисни на точку, коли вона світиться!</div>
@@ -1144,6 +1197,8 @@
   var cellarBannerEl = document.getElementById('cellarBanner');
   var cellarMainEl = document.getElementById('cellarMain');
   var cellarSubEl = document.getElementById('cellarSub');
+  var countdownOverlayEl = document.getElementById('countdownOverlay');
+  var countdownNumEl = document.getElementById('countdownNum');
 
   var toastTimer = null;
   var comboBadgeTimer = null;
@@ -1158,15 +1213,19 @@
       d.className = 'point-dot';
       d.style.left = (px/260*100) + '%';
       d.style.top = (py/260*100) + '%';
+      var pulse = document.createElement('div');
+      pulse.className = 'pulse';
+      d.appendChild(pulse);
       var ring = document.createElement('div');
       ring.className = 'ring';
       d.appendChild(ring);
-      (function(idx, el, ringEl){
+      (function(idx, el, ringEl, pulseEl){
         function tryHit(){ onDotTap(idx); }
         el.addEventListener('touchstart', function(e){ e.preventDefault(); tryHit(); }, {passive:false});
         el.addEventListener('mousedown', function(e){ tryHit(); });
         el._ring = ringEl;
-      })(i, d, ring);
+        el._pulse = pulseEl;
+      })(i, d, ring, pulse);
       pointsLayerEl.appendChild(d);
       pointEls.push(d);
     }
@@ -1186,7 +1245,11 @@
 
   var jar = {
     active: false,
+    starting: false,
     sequenceIndex: 0,
+    stepIndex: 0,
+    revolutions: 1,
+    totalSteps: POINTS_COUNT,
     missesThisJar: 0,
     comboThisJar: 0,
     recipeMult: 1,
@@ -1194,6 +1257,8 @@
     isAuto: false
   };
   var activeTimer = null;
+  var countdownTimer = null;
+  var countdownToken = 0;
   var screenIsTap = false;
 
   function clearDotClasses(){ pointEls.forEach(function(el){ el.classList.remove('active','hit','miss'); }); }
@@ -1280,7 +1345,7 @@
     levelXpLabelEl.textContent = xpInLevel + '/' + XP_PER_LEVEL;
     levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
 
-    recipeLineEl.innerHTML = 'Рецепт: <b>' + jar.recipeLabel + '</b>' + (jar.recipeMult > 1 ? ' (+' + Math.round((jar.recipeMult-1)*100) + '%)' : '');
+    recipeLineEl.innerHTML = 'Рецепт: <b>' + jar.recipeLabel + '</b>' + (jar.recipeMult > 1 ? ' (+' + Math.round((jar.recipeMult-1)*100) + '%)' : '') + (jar.revolutions > 1 ? ' · 🔄 ' + jar.revolutions + ' оберти' : '');
     keyLineEl.textContent = 'Ключ: ' + kt.emoji + ' ' + kt.name;
 
     renderCellarBanner();
@@ -1329,11 +1394,18 @@
     pt.classList.add('active');
     moveWrenchTo(i);
     var ring = pt._ring;
+    var pulse = pt._pulse;
     var winMs = activeWindowMs();
     ring.style.animation = 'none';
     void ring.offsetWidth;
     ring.style.animation = 'shrinkRing ' + winMs + 'ms linear forwards';
-    hintEl.textContent = 'Тисни на точку, поки вона світиться!';
+    if(pulse){
+      pulse.style.animation = 'none';
+      void pulse.offsetWidth;
+      pulse.style.animation = 'shrinkDot ' + winMs + 'ms linear forwards';
+    }
+    var revLabel = jar.totalSteps > POINTS_COUNT ? ' (оберт ' + (Math.floor(jar.stepIndex/POINTS_COUNT)+1) + '/' + jar.revolutions + ')' : '';
+    hintEl.textContent = 'Тисни на точку, поки вона світиться!' + revLabel;
     activeTimer = setTimeout(function(){ onDotResult(i, false); }, winMs);
   }
 
@@ -1355,9 +1427,18 @@
       jar.comboThisJar++;
       showComboBadge(jar.comboThisJar);
       if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-      var next = i + 1;
-      if(next >= POINTS_COUNT){ sealJar(); }
-      else { jar.sequenceIndex = next; setTimeout(function(){ if(jar.active) activatePoint(next); }, 110); }
+      var nextStep = jar.stepIndex + 1;
+      if(nextStep >= jar.totalSteps){ sealJar(); }
+      else {
+        var nextPhysical = nextStep % POINTS_COUNT;
+        if(nextPhysical === 0){
+          showToast('Оберт завершено! 🔄');
+          if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        }
+        jar.stepIndex = nextStep;
+        jar.sequenceIndex = nextPhysical;
+        setTimeout(function(){ if(jar.active) activatePoint(nextPhysical); }, 110);
+      }
       return;
     }
 
@@ -1382,7 +1463,7 @@
   }
 
   function ruinLid(){
-    jar.missesThisJar = 0; jar.comboThisJar = 0; jar.sequenceIndex = 0;
+    jar.missesThisJar = 0; jar.comboThisJar = 0; jar.sequenceIndex = 0; jar.stepIndex = 0;
     clearDotClasses();
     showToast('Кришка зіпсована! Беремо нову 🫙');
     hintEl.textContent = 'Нова кришка — починаємо закрутку заново';
@@ -1397,7 +1478,8 @@
 
     var perfect = (!jar.isAuto) && jar.missesThisJar === 0;
     var comboBonus = jar.isAuto ? 1 : (1 + Math.min(1.4, jar.comboThisJar * 0.05));
-    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult * activeKeyType().rewardMult);
+    var revBonus = 1 + (jar.revolutions - 1) * 0.35;
+    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult * activeKeyType().rewardMult * revBonus);
 
     state.cellar.push({ readyAt: Date.now() + sterilizeMs(), reward: reward, label: jar.recipeLabel });
     state.jarsSealed += 1;
@@ -1409,7 +1491,47 @@
     hintEl.textContent = perfect ? 'Ідеально! Банка в льоху на стерилізації' : 'Банку відправлено в льох';
     if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
+    jarStageEl.classList.remove('jar-enter');
+    void jarStageEl.offsetWidth;
+    jarStageEl.classList.add('jar-exit');
+
     setTimeout(function(){ if(screenIsTap) tryStartJar(); }, 650);
+  }
+
+  jarStageEl.addEventListener('animationend', function(e){
+    if(e.animationName === 'jarExit'){ jarStageEl.classList.remove('jar-exit'); }
+    if(e.animationName === 'jarEnter'){ jarStageEl.classList.remove('jar-enter'); }
+  });
+
+  function cancelCountdown(){
+    countdownToken++;
+    clearTimeout(countdownTimer);
+    jar.starting = false;
+    countdownOverlayEl.classList.remove('show');
+  }
+
+  function runCountdown(onDone){
+    var myToken = ++countdownToken;
+    jar.starting = true;
+    countdownOverlayEl.classList.add('show');
+    var n = 3;
+    function tick(){
+      if(myToken !== countdownToken) return;
+      if(n <= 0){
+        countdownOverlayEl.classList.remove('show');
+        jar.starting = false;
+        onDone();
+        return;
+      }
+      countdownNumEl.textContent = n;
+      countdownNumEl.style.animation = 'none';
+      void countdownNumEl.offsetWidth;
+      countdownNumEl.style.animation = 'countPulse 700ms ease-out';
+      if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+      n--;
+      countdownTimer = setTimeout(tick, 700);
+    }
+    tick();
   }
 
   function tryStartJar(){
@@ -1437,25 +1559,37 @@
       jar.recipeLabel = 'Звичайна закрутка';
     }
 
+    jar.revolutions = (info && info.main && info.main.rare) ? 2 : 1;
+    jar.totalSteps = POINTS_COUNT * jar.revolutions;
+
     save();
     render();
 
     jar.active = true;
     jar.sequenceIndex = 0;
+    jar.stepIndex = 0;
     jar.missesThisJar = 0;
     jar.comboThisJar = 0;
     clearDotClasses();
 
-    if(activeKeyType().auto){
-      jar.isAuto = true;
-      jarStageEl.classList.add('auto-mode');
-      wrenchEl.style.opacity = '0';
-      hintEl.textContent = 'Автоключ сам закручує банку...';
-      setTimeout(function(){ if(jar.active && jar.isAuto) sealJar(); }, AUTO_JAR_MS);
-    } else {
-      jar.isAuto = false;
-      activatePoint(0);
-    }
+    jarStageEl.classList.remove('jar-exit');
+    void jarStageEl.offsetWidth;
+    jarStageEl.classList.add('jar-enter');
+
+    hintEl.textContent = 'Приготуйся...';
+    runCountdown(function(){
+      if(!jar.active) return;
+      if(activeKeyType().auto){
+        jar.isAuto = true;
+        jarStageEl.classList.add('auto-mode');
+        wrenchEl.style.opacity = '0';
+        hintEl.textContent = 'Автоключ сам закручує банку...';
+        setTimeout(function(){ if(jar.active && jar.isAuto) sealJar(); }, AUTO_JAR_MS);
+      } else {
+        jar.isAuto = false;
+        activatePoint(0);
+      }
+    });
   }
 
   document.getElementById('newKeyBtn').addEventListener('click', function(){
@@ -1679,6 +1813,11 @@
   var upgrCard = document.getElementById('upgrCard');
 
   function showScreen(name){
+    if(screenIsTap && name !== 'tap' && jar.starting){
+      cancelCountdown();
+      jar.active = false;
+      jarStageEl.classList.remove('jar-enter');
+    }
     screenHome.classList.remove('active');
     screenTap.classList.remove('active');
     screenIngr.classList.remove('active');
