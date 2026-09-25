@@ -10,6 +10,7 @@
     --bg-top:#1b2a1f;
     --bg-bottom:#0e1610;
     --panel:#243527;
+    --panel-2:#1c2a20;
     --panel-border:#3a5240;
     --accent:#8bc34a;
     --accent-2:#ffca28;
@@ -20,6 +21,8 @@
     --jar-glass-2:#a9d69c;
     --lid:#c9a24a;
     --lid-dark:#9c7a2e;
+    --nav-h:78px;
+    --top-h:64px;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;}
   html,body{
@@ -31,59 +34,78 @@
     touch-action:manipulation;
   }
   #app{
+    position:relative;
     height:100%;
-    display:flex;
-    flex-direction:column;
-    padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
     max-width:520px;
     margin:0 auto;
-  }
-  header{
-    padding:14px 0 10px;
-    text-align:center;
-  }
-  .title{
-    font-size:26px;
-    font-weight:800;
-    letter-spacing:1px;
-    background:linear-gradient(90deg,var(--accent),var(--accent-2));
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
-    margin:0;
-  }
-  .subtitle{
-    font-size:12px;
-    color:var(--text-dim);
-    margin-top:2px;
-  }
-  .stats-row{
     display:flex;
-    gap:10px;
-    margin:12px 0;
+    flex-direction:column;
+    padding-top:env(safe-area-inset-top);
+    padding-bottom:env(safe-area-inset-bottom);
   }
-  .stat-card{
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{
+    height:var(--top-h);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 12px;
+    flex-shrink:0;
+  }
+  .icon-btn{
+    width:44px;height:44px;
+    border-radius:14px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    flex-shrink:0;
+    cursor:pointer;
+  }
+  .icon-btn:active{ transform:scale(.94); }
+  .level-wrap{
     flex:1;
     background:var(--panel);
     border:1px solid var(--panel-border);
     border-radius:14px;
-    padding:10px 12px;
-    text-align:center;
+    padding:6px 10px;
+    min-width:0;
   }
-  .stat-label{
-    font-size:11px;
+  .level-top-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:10px;
     color:var(--text-dim);
     text-transform:uppercase;
     letter-spacing:.5px;
+    margin-bottom:4px;
   }
-  .stat-value{
-    font-size:20px;
-    font-weight:800;
-    margin-top:2px;
+  .level-bar{
+    height:8px;
+    border-radius:5px;
+    background:#12200f;
+    overflow:hidden;
+  }
+  .level-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#6fae2e,var(--accent));
+    border-radius:5px;
+    transition:width .3s ease;
+  }
+  .currency-pill{
     display:flex;
     align-items:center;
-    justify-content:center;
-    gap:4px;
+    gap:6px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:0 10px;
+    height:44px;
+    font-weight:800;
+    font-size:15px;
+    flex-shrink:0;
   }
   .cap-icon{
     width:18px;height:18px;
@@ -91,9 +113,171 @@
     border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #fff6d0, var(--lid) 60%, var(--lid-dark));
     box-shadow:0 0 0 2px rgba(0,0,0,.25) inset;
+    flex-shrink:0;
   }
-  main{
+
+  /* ---------- SCREENS ---------- */
+  .screens{
     flex:1;
+    position:relative;
+    overflow:hidden;
+  }
+  .screen{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    overflow-y:auto;
+    padding:4px 16px 16px;
+  }
+  .screen.active{ display:flex; }
+
+  /* ---- HOME SCREEN ---- */
+  .title{
+    font-size:24px;
+    font-weight:800;
+    letter-spacing:1px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    margin:8px 0 2px;
+    text-align:center;
+  }
+  .subtitle{
+    font-size:12px;
+    color:var(--text-dim);
+    text-align:center;
+    margin-bottom:14px;
+  }
+  .banner-card{
+    background:linear-gradient(120deg,#2d4530,#243527);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:13px;
+    color:var(--text-dim);
+    margin-bottom:14px;
+  }
+  .banner-card .emoji{ font-size:22px; }
+  .hero-card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:20px;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    margin-bottom:16px;
+  }
+  .hero-jar{
+    width:130px;height:130px;
+    margin-bottom:6px;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,.4));
+  }
+  .hero-title{ font-weight:800; font-size:16px; margin-bottom:2px; }
+  .hero-sub{ font-size:12px; color:var(--text-dim); margin-bottom:12px; }
+  .cta-btn{
+    background:linear-gradient(90deg,#6fae2e,var(--accent));
+    color:#12200f;
+    border:none;
+    border-radius:14px;
+    padding:12px 28px;
+    font-weight:800;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .cta-btn:active{ transform:scale(.97); }
+
+  .section-label{
+    font-size:11px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    margin:4px 0 8px;
+  }
+  .quick-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:10px;
+  }
+  .quick-card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:14px 6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+  }
+  .quick-card:active{ transform:scale(.95); }
+  .quick-card .emoji{ font-size:26px; }
+  .quick-card .label{ font-size:11px; color:var(--text-dim); text-align:center; }
+  .soon-dot{
+    position:absolute;
+    top:6px; right:6px;
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--accent-2);
+  }
+  .quick-card{ position:relative; }
+
+  /* ---- TAP SCREEN ---- */
+  #screen-tap{ align-items:center; justify-content:flex-start; padding-top:10px; }
+  .tap-topline{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .back-btn{
+    width:38px;height:38px;
+    border-radius:12px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:18px;
+    cursor:pointer;
+  }
+  .stats-row{
+    display:flex;
+    gap:10px;
+    margin:8px 0 6px;
+    width:100%;
+  }
+  .stat-card{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:8px 10px;
+    text-align:center;
+  }
+  .stat-label{
+    font-size:10px;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.5px;
+  }
+  .stat-value{
+    font-size:18px;
+    font-weight:800;
+    margin-top:2px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+  }
+  .tap-main{
+    flex:1;
+    width:100%;
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -113,8 +297,8 @@
   .combo-badge.show{opacity:1;}
   .jar-wrap{
     position:relative;
-    width:min(62vw,260px);
-    height:min(62vw,260px);
+    width:min(58vw,240px);
+    height:min(58vw,240px);
     display:flex;
     align-items:center;
     justify-content:center;
@@ -127,16 +311,12 @@
     filter:drop-shadow(0 10px 18px rgba(0,0,0,.45));
     transition:transform .06s ease-out;
   }
-  .jar-wrap.tapped svg{
-    transform:scale(.93);
-  }
-  #lidGroup{
+  .jar-wrap.tapped svg{ transform:scale(.93); }
+  .lidGroup{
     transform-origin:130px 78px;
     transition:transform .08s ease-out;
   }
-  .jar-wrap.tapped #lidGroup{
-    transform:rotate(22deg) scale(.97);
-  }
+  .jar-wrap.tapped .lidGroup{ transform:rotate(22deg) scale(.97); }
   .float-pop{
     position:absolute;
     font-weight:800;
@@ -152,15 +332,13 @@
     100%{transform:translateY(-70px) scale(1);opacity:0;}
   }
   .hint{
-    margin-top:18px;
+    margin-top:14px;
     font-size:13px;
     color:var(--text-dim);
     text-align:center;
     min-height:18px;
   }
-  footer{
-    padding:10px 0 16px;
-  }
+  .tap-footer{ width:100%; padding:6px 0 4px; }
   .energy-label{
     display:flex;
     justify-content:space-between;
@@ -184,69 +362,243 @@
     border-radius:8px;
     transition:width .2s linear;
   }
-  .energy-fill.low{
-    background:linear-gradient(90deg,#8a3d3d,var(--danger));
-  }
+  .energy-fill.low{ background:linear-gradient(90deg,#8a3d3d,var(--danger)); }
   .best-row{
     text-align:center;
-    margin-top:10px;
+    margin-top:8px;
     font-size:11px;
     color:var(--text-dim);
+  }
+
+  /* ---------- BOTTOM NAV ---------- */
+  .bottom-nav{
+    height:var(--nav-h);
+    flex-shrink:0;
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-around;
+    background:var(--panel-2);
+    border-top:1px solid var(--panel-border);
+    padding-top:8px;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-btn{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-size:10px;
+    cursor:pointer;
+    width:56px;
+  }
+  .nav-btn .nav-emoji{
+    font-size:20px;
+    width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:12px;
+  }
+  .nav-btn.active{ color:var(--accent-2); }
+  .nav-btn.active .nav-emoji{ background:rgba(255,202,40,.12); }
+  .nav-btn.primary .nav-emoji{
+    width:52px;height:52px;
+    font-size:26px;
+    border-radius:50%;
+    background:linear-gradient(145deg,#6fae2e,var(--accent));
+    color:#12200f;
+    margin-top:-22px;
+    box-shadow:0 6px 14px rgba(0,0,0,.4), 0 0 0 4px var(--panel-2);
+  }
+  .nav-btn.primary{ color:var(--accent); font-weight:700; }
+  .nav-btn:active{ transform:scale(.93); }
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position:absolute;
+    left:50%;
+    bottom:calc(var(--nav-h) + 14px);
+    transform:translateX(-50%) translateY(10px);
+    background:#12200f;
+    border:1px solid var(--panel-border);
+    color:var(--text);
+    padding:10px 16px;
+    border-radius:12px;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+    white-space:nowrap;
+    z-index:20;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
   }
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <h1 class="title">ZAKRUTQI</h1>
-    <div class="subtitle">Закручуй банки на швидкість!</div>
-  </header>
 
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-label">Кришки</div>
-      <div class="stat-value"><span class="cap-icon"></span><span id="capsValue">0</span></div>
+  <div class="topbar">
+    <button class="icon-btn" id="profileBtn" title="Профіль">👤</button>
+    <div class="level-wrap">
+      <div class="level-top-row"><span id="levelLabel">Рівень 1</span><span id="levelXpLabel">0/500</span></div>
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Комбо</div>
-      <div class="stat-value">x<span id="comboValue">1</span></div>
-    </div>
+    <div class="currency-pill"><span class="cap-icon"></span><span id="capsValueTop">0</span></div>
+    <button class="icon-btn" id="settingsBtn" title="Налаштування">⚙️</button>
   </div>
 
-  <main>
-    <div class="combo-badge" id="comboBadge">КОМБО!</div>
-    <div class="jar-wrap" id="jarWrap">
-      <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="130" cy="235" rx="70" ry="10" fill="#000" opacity="0.25"/>
-        <path d="M75 95 Q75 78 95 78 L165 78 Q185 78 185 95 L192 205 Q192 228 165 228 L95 228 Q68 228 68 205 Z"
-              fill="url(#glassGrad)" stroke="#7fa476" stroke-width="3"/>
-        <path d="M85 130 Q130 145 175 130 L172 190 Q130 205 88 190 Z" fill="var(--jar-glass-2)" opacity="0.55"/>
-        <rect x="88" y="60" width="84" height="24" rx="6" fill="#8f9a86" stroke="#6b756a" stroke-width="2"/>
-        <g id="lidGroup">
-          <ellipse cx="130" cy="58" rx="46" ry="16" fill="url(#lidGrad)" stroke="var(--lid-dark)" stroke-width="3"/>
-          <ellipse cx="130" cy="54" rx="38" ry="11" fill="none" stroke="#7a5d22" stroke-width="2" opacity="0.5"/>
-        </g>
-        <defs>
-          <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#e7f5e1"/>
-            <stop offset="100%" stop-color="var(--jar-glass)"/>
-          </linearGradient>
-          <radialGradient id="lidGrad" cx="35%" cy="30%" r="70%">
-            <stop offset="0%" stop-color="#fff3c4"/>
-            <stop offset="60%" stop-color="var(--lid)"/>
-            <stop offset="100%" stop-color="var(--lid-dark)"/>
-          </radialGradient>
-        </defs>
-      </svg>
-    </div>
-    <div class="hint" id="hint">Тапай по банці, щоб закрутити!</div>
-  </main>
+  <div class="screens">
 
-  <footer>
-    <div class="energy-label"><span>Енергія</span><span id="energyText">100/100</span></div>
-    <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
-    <div class="best-row">Рекорд за сесію: <span id="bestValue">0</span> кришок</div>
-  </footer>
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <h1 class="title">ZAKRUTQI</h1>
+      <div class="subtitle">Твій льох чекає на нові банки</div>
+
+      <div class="banner-card">
+        <span class="emoji">🎁</span>
+        <span>Щоденні бонуси та турніри скоро з'являться тут</span>
+      </div>
+
+      <div class="hero-card">
+        <svg class="hero-jar" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="130" cy="235" rx="70" ry="10" fill="#000" opacity="0.25"/>
+          <path d="M75 95 Q75 78 95 78 L165 78 Q185 78 185 95 L192 205 Q192 228 165 228 L95 228 Q68 228 68 205 Z"
+                fill="url(#glassGradHome)" stroke="#7fa476" stroke-width="3"/>
+          <path d="M85 130 Q130 145 175 130 L172 190 Q130 205 88 190 Z" fill="var(--jar-glass-2)" opacity="0.55"/>
+          <rect x="88" y="60" width="84" height="24" rx="6" fill="#8f9a86" stroke="#6b756a" stroke-width="2"/>
+          <ellipse cx="130" cy="58" rx="46" ry="16" fill="url(#lidGradHome)" stroke="var(--lid-dark)" stroke-width="3"/>
+          <defs>
+            <linearGradient id="glassGradHome" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#e7f5e1"/>
+              <stop offset="100%" stop-color="var(--jar-glass)"/>
+            </linearGradient>
+            <radialGradient id="lidGradHome" cx="35%" cy="30%" r="70%">
+              <stop offset="0%" stop-color="#fff3c4"/>
+              <stop offset="60%" stop-color="var(--lid)"/>
+              <stop offset="100%" stop-color="var(--lid-dark)"/>
+            </radialGradient>
+          </defs>
+        </svg>
+        <div class="hero-title">Закручуй банки</div>
+        <div class="hero-sub">Тапай на швидкість і заробляй кришки</div>
+        <button class="cta-btn" id="playCta">Грати</button>
+      </div>
+
+      <div class="section-label">Розділи гри</div>
+      <div class="quick-grid">
+        <div class="quick-card" data-soon="Арена">
+          <span class="soon-dot"></span>
+          <span class="emoji">⚔️</span>
+          <span class="label">Арена</span>
+        </div>
+        <div class="quick-card" data-soon="Інгредієнти">
+          <span class="soon-dot"></span>
+          <span class="emoji">🧄</span>
+          <span class="label">Інгредієнти</span>
+        </div>
+        <div class="quick-card" data-soon="Рейтинги">
+          <span class="soon-dot"></span>
+          <span class="emoji">🏆</span>
+          <span class="label">Рейтинги</span>
+        </div>
+        <div class="quick-card" data-soon="Гільдія">
+          <span class="soon-dot"></span>
+          <span class="emoji">🛡️</span>
+          <span class="label">Гільдія</span>
+        </div>
+        <div class="quick-card" data-soon="Профіль">
+          <span class="soon-dot"></span>
+          <span class="emoji">👤</span>
+          <span class="label">Профіль</span>
+        </div>
+        <div class="quick-card" data-soon="Налаштування">
+          <span class="soon-dot"></span>
+          <span class="emoji">⚙️</span>
+          <span class="label">Налаштування</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAP GAME -->
+    <div class="screen" id="screen-tap">
+      <div class="tap-topline">
+        <button class="back-btn" id="backBtn">←</button>
+        <div style="font-weight:800;font-size:14px;">Закручування банок</div>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Кришки</div>
+          <div class="stat-value"><span class="cap-icon"></span><span id="capsValue">0</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Комбо</div>
+          <div class="stat-value">x<span id="comboValue">1</span></div>
+        </div>
+      </div>
+
+      <div class="tap-main">
+        <div class="combo-badge" id="comboBadge">КОМБО!</div>
+        <div class="jar-wrap" id="jarWrap">
+          <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="130" cy="235" rx="70" ry="10" fill="#000" opacity="0.25"/>
+            <path d="M75 95 Q75 78 95 78 L165 78 Q185 78 185 95 L192 205 Q192 228 165 228 L95 228 Q68 228 68 205 Z"
+                  fill="url(#glassGrad)" stroke="#7fa476" stroke-width="3"/>
+            <path d="M85 130 Q130 145 175 130 L172 190 Q130 205 88 190 Z" fill="var(--jar-glass-2)" opacity="0.55"/>
+            <rect x="88" y="60" width="84" height="24" rx="6" fill="#8f9a86" stroke="#6b756a" stroke-width="2"/>
+            <g class="lidGroup">
+              <ellipse cx="130" cy="58" rx="46" ry="16" fill="url(#lidGrad)" stroke="var(--lid-dark)" stroke-width="3"/>
+              <ellipse cx="130" cy="54" rx="38" ry="11" fill="none" stroke="#7a5d22" stroke-width="2" opacity="0.5"/>
+            </g>
+            <defs>
+              <linearGradient id="glassGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#e7f5e1"/>
+                <stop offset="100%" stop-color="var(--jar-glass)"/>
+              </linearGradient>
+              <radialGradient id="lidGrad" cx="35%" cy="30%" r="70%">
+                <stop offset="0%" stop-color="#fff3c4"/>
+                <stop offset="60%" stop-color="var(--lid)"/>
+                <stop offset="100%" stop-color="var(--lid-dark)"/>
+              </radialGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="hint" id="hint">Тапай по банці, щоб закрутити!</div>
+      </div>
+
+      <div class="tap-footer">
+        <div class="energy-label"><span>Енергія</span><span id="energyText">100/100</span></div>
+        <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
+        <div class="best-row">Рекорд за сесію: <span id="bestValue">0</span> кришок</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn" data-soon="Арена">
+      <span class="nav-emoji">⚔️</span>Арена
+    </button>
+    <button class="nav-btn" data-soon="Гільдія">
+      <span class="nav-emoji">🛡️</span>Гільдія
+    </button>
+    <button class="nav-btn primary" id="navBanky">
+      <span class="nav-emoji">🫙</span>Банки
+    </button>
+    <button class="nav-btn" data-soon="Інгредієнти">
+      <span class="nav-emoji">🧄</span>Інгред.
+    </button>
+    <button class="nav-btn" data-soon="Рейтинги">
+      <span class="nav-emoji">🏆</span>Рейтинг
+    </button>
+  </div>
+
 </div>
 
 <script>
@@ -264,10 +616,11 @@
 
   var STORAGE_KEY = 'zakrutqi_state_v1';
   var MAX_ENERGY = 100;
-  var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s -> full refill in 60s
+  var REGEN_MS_PER_POINT = 600;
   var COMBO_WINDOW_MS = 350;
-  var COMBO_STEP = 5; // every 5 fast taps => +1 multiplier
+  var COMBO_STEP = 5;
   var MAX_MULTIPLIER = 5;
+  var XP_PER_LEVEL = 500;
 
   var state = {
     caps: 0,
@@ -304,7 +657,9 @@
     }
   }
 
+  // ---------- elements ----------
   var capsValueEl = document.getElementById('capsValue');
+  var capsValueTopEl = document.getElementById('capsValueTop');
   var comboValueEl = document.getElementById('comboValue');
   var comboBadgeEl = document.getElementById('comboBadge');
   var bestValueEl = document.getElementById('bestValue');
@@ -312,10 +667,15 @@
   var energyTextEl = document.getElementById('energyText');
   var jarWrapEl = document.getElementById('jarWrap');
   var hintEl = document.getElementById('hint');
+  var levelLabelEl = document.getElementById('levelLabel');
+  var levelXpLabelEl = document.getElementById('levelXpLabel');
+  var levelFillEl = document.getElementById('levelFill');
+  var toastEl = document.getElementById('toast');
 
   var comboCount = 0;
   var lastTapTs = 0;
   var comboBadgeTimer = null;
+  var toastTimer = null;
 
   function currentMultiplier(){
     return Math.min(MAX_MULTIPLIER, 1 + Math.floor(comboCount / COMBO_STEP));
@@ -323,17 +683,23 @@
 
   function render(){
     capsValueEl.textContent = state.caps;
+    capsValueTopEl.textContent = state.caps;
     bestValueEl.textContent = state.best;
     comboValueEl.textContent = currentMultiplier();
+
     var pct = Math.round((state.energy / MAX_ENERGY) * 100);
     energyFillEl.style.width = pct + '%';
     energyTextEl.textContent = Math.floor(state.energy) + '/' + MAX_ENERGY;
     if(pct <= 20){ energyFillEl.classList.add('low'); } else { energyFillEl.classList.remove('low'); }
-    if(state.energy <= 0){
-      hintEl.textContent = 'Енергія закінчилась — зачекай, поки відновиться';
-    } else {
-      hintEl.textContent = 'Тапай по банці, щоб закрутити!';
-    }
+    hintEl.textContent = state.energy <= 0
+      ? 'Енергія закінчилась — зачекай, поки відновиться'
+      : 'Тапай по банці, щоб закрутити!';
+
+    var level = 1 + Math.floor(state.caps / XP_PER_LEVEL);
+    var xpInLevel = state.caps % XP_PER_LEVEL;
+    levelLabelEl.textContent = 'Рівень ' + level;
+    levelXpLabelEl.textContent = xpInLevel + '/' + XP_PER_LEVEL;
+    levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
   }
 
   function spawnFloatPop(text, x, y){
@@ -356,11 +722,7 @@
     }
 
     var now = Date.now();
-    if(now - lastTapTs <= COMBO_WINDOW_MS){
-      comboCount++;
-    } else {
-      comboCount = 1;
-    }
+    if(now - lastTapTs <= COMBO_WINDOW_MS){ comboCount++; } else { comboCount = 1; }
     lastTapTs = now;
 
     var mult = currentMultiplier();
@@ -407,6 +769,51 @@
     render();
     save();
   }, 250);
+
+  // ---------- navigation ----------
+  var screenHome = document.getElementById('screen-home');
+  var screenTap = document.getElementById('screen-tap');
+  var navBanky = document.getElementById('navBanky');
+  var backBtn = document.getElementById('backBtn');
+  var playCta = document.getElementById('playCta');
+
+  function showScreen(name){
+    screenHome.classList.remove('active');
+    screenTap.classList.remove('active');
+    navBanky.classList.remove('active');
+    if(name === 'tap'){
+      screenTap.classList.add('active');
+      navBanky.classList.add('active');
+    } else {
+      screenHome.classList.add('active');
+    }
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  }
+
+  navBanky.addEventListener('click', function(){ showScreen('tap'); });
+  playCta.addEventListener('click', function(){ showScreen('tap'); });
+  backBtn.addEventListener('click', function(){ showScreen('home'); });
+
+  function showToast(text){
+    clearTimeout(toastTimer);
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1400);
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+  }
+
+  document.querySelectorAll('[data-soon]').forEach(function(el){
+    el.addEventListener('click', function(){
+      showToast(el.getAttribute('data-soon') + ' — скоро буде 🚧');
+    });
+  });
+
+  document.getElementById('profileBtn').addEventListener('click', function(){
+    showToast('Профіль — скоро буде 🚧');
+  });
+  document.getElementById('settingsBtn').addEventListener('click', function(){
+    showToast('Налаштування — скоро буде 🚧');
+  });
 
   render();
 })();
