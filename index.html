@@ -215,6 +215,7 @@
     align-items:center;
     gap:6px;
     cursor:pointer;
+    position:relative;
   }
   .quick-card:active{ transform:scale(.95); }
   .quick-card .emoji{ font-size:26px; }
@@ -226,7 +227,6 @@
     border-radius:50%;
     background:var(--accent-2);
   }
-  .quick-card{ position:relative; }
 
   /* ---- TAP SCREEN ---- */
   #screen-tap{ align-items:center; justify-content:flex-start; padding-top:10px; }
@@ -248,7 +248,7 @@
   }
   .stats-row{
     display:flex;
-    gap:10px;
+    gap:8px;
     margin:8px 0 6px;
     width:100%;
   }
@@ -257,17 +257,19 @@
     background:var(--panel);
     border:1px solid var(--panel-border);
     border-radius:14px;
-    padding:8px 10px;
+    padding:8px 6px;
     text-align:center;
+    min-width:0;
   }
   .stat-label{
-    font-size:10px;
+    font-size:9.5px;
     color:var(--text-dim);
     text-transform:uppercase;
-    letter-spacing:.5px;
+    letter-spacing:.4px;
+    white-space:nowrap;
   }
   .stat-value{
-    font-size:18px;
+    font-size:17px;
     font-weight:800;
     margin-top:2px;
     display:flex;
@@ -286,51 +288,91 @@
   }
   .combo-badge{
     position:absolute;
-    top:-6px;
+    top:2px;
     font-size:14px;
     font-weight:800;
     color:var(--accent-2);
     opacity:0;
     transition:opacity .15s;
     text-shadow:0 0 8px rgba(255,202,40,.5);
+    z-index:6;
   }
   .combo-badge.show{opacity:1;}
-  .jar-wrap{
+  .jar-stage{
     position:relative;
-    width:min(58vw,240px);
-    height:min(58vw,240px);
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    touch-action:manipulation;
+    width:min(64vw,250px);
+    height:min(64vw,250px);
   }
-  .jar-wrap svg{
+  .jar-stage svg{
     width:100%;
     height:100%;
     filter:drop-shadow(0 10px 18px rgba(0,0,0,.45));
-    transition:transform .06s ease-out;
   }
-  .jar-wrap.tapped svg{ transform:scale(.93); }
-  .lidGroup{
-    transform-origin:130px 78px;
-    transition:transform .08s ease-out;
-  }
-  .jar-wrap.tapped .lidGroup{ transform:rotate(22deg) scale(.97); }
-  .float-pop{
+  .points-layer{
     position:absolute;
-    font-weight:800;
-    font-size:20px;
-    color:var(--accent-2);
+    inset:0;
     pointer-events:none;
-    animation:floatUp .7s ease-out forwards;
-    text-shadow:0 2px 4px rgba(0,0,0,.4);
   }
-  @keyframes floatUp{
-    0%{transform:translateY(0) scale(.8);opacity:0;}
-    15%{opacity:1;transform:translateY(-10px) scale(1.05);}
-    100%{transform:translateY(-70px) scale(1);opacity:0;}
+  .point-dot{
+    position:absolute;
+    width:26px;height:26px;
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:#12200f;
+    border:2px solid var(--panel-border);
+    pointer-events:none;
+    transition:background .15s,border-color .15s;
   }
+  .point-dot .ring{
+    position:absolute;
+    inset:-5px;
+    border-radius:50%;
+    border:3px solid var(--accent-2);
+    opacity:0;
+  }
+  .point-dot.active{
+    pointer-events:auto;
+    background:rgba(255,202,40,.3);
+    border-color:var(--accent-2);
+    box-shadow:0 0 10px rgba(255,202,40,.65);
+    cursor:pointer;
+  }
+  .point-dot.active .ring{ opacity:1; }
+  .point-dot.hit{ background:rgba(139,195,74,.4); border-color:var(--accent); }
+  .point-dot.miss{ background:rgba(224,92,92,.4); border-color:var(--danger); }
+  @keyframes shrinkRing{
+    from{ transform:scale(1); opacity:1; }
+    to{ transform:scale(.1); opacity:0; }
+  }
+  .wrench-icon{
+    position:absolute;
+    width:26px;height:26px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:20px;
+    transform:translate(-50%,-50%);
+    transition:left .2s ease, top .2s ease;
+    pointer-events:none;
+    z-index:4;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  }
+  .key-overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(14,22,16,.9);
+    border-radius:20px;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:8px;
+    padding:20px;
+    text-align:center;
+    z-index:10;
+  }
+  .key-overlay.show{ display:flex; }
+  .key-overlay .big-emoji{ font-size:34px; }
+  .key-overlay .kt{ font-weight:800; font-size:15px; }
+  .key-overlay .ks{ font-size:12px; color:var(--text-dim); }
   .hint{
     margin-top:14px;
     font-size:13px;
@@ -338,36 +380,48 @@
     text-align:center;
     min-height:18px;
   }
-  .tap-footer{ width:100%; padding:6px 0 4px; }
-  .energy-label{
+  .tap-footer{ width:100%; padding:8px 0 4px; }
+  .bar-row{ margin-bottom:8px; }
+  .bar-label{
     display:flex;
     justify-content:space-between;
     font-size:11px;
     color:var(--text-dim);
-    margin-bottom:6px;
+    margin-bottom:5px;
     text-transform:uppercase;
     letter-spacing:.5px;
   }
-  .energy-bar{
-    height:14px;
+  .bar-track{
+    height:12px;
     border-radius:8px;
     background:#12200f;
     border:1px solid var(--panel-border);
     overflow:hidden;
   }
-  .energy-fill{
+  .bar-fill{
     height:100%;
     width:100%;
     background:linear-gradient(90deg,#6fae2e,var(--accent));
     border-radius:8px;
     transition:width .2s linear;
   }
-  .energy-fill.low{ background:linear-gradient(90deg,#8a3d3d,var(--danger)); }
-  .best-row{
-    text-align:center;
-    margin-top:8px;
-    font-size:11px;
-    color:var(--text-dim);
+  .bar-fill.low{ background:linear-gradient(90deg,#8a3d3d,var(--danger)); }
+  .bar-fill.key{ background:linear-gradient(90deg,#8a7a2e,var(--accent-2)); }
+
+  .float-pop{
+    position:fixed;
+    font-weight:800;
+    font-size:20px;
+    color:var(--accent-2);
+    pointer-events:none;
+    animation:floatUp .8s ease-out forwards;
+    text-shadow:0 2px 4px rgba(0,0,0,.4);
+    z-index:30;
+  }
+  @keyframes floatUp{
+    0%{transform:translateY(0) scale(.8);opacity:0;}
+    15%{opacity:1;transform:translateY(-10px) scale(1.05);}
+    100%{transform:translateY(-70px) scale(1);opacity:0;}
   }
 
   /* ---------- BOTTOM NAV ---------- */
@@ -484,7 +538,7 @@
           </defs>
         </svg>
         <div class="hero-title">Закручуй банки</div>
-        <div class="hero-sub">Тапай на швидкість і заробляй кришки</div>
+        <div class="hero-sub">Влучай по точках навколо кришки ключем</div>
         <button class="cta-btn" id="playCta">Грати</button>
       </div>
 
@@ -536,21 +590,26 @@
           <div class="stat-value"><span class="cap-icon"></span><span id="capsValue">0</span></div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Комбо</div>
-          <div class="stat-value">x<span id="comboValue">1</span></div>
+          <div class="stat-label">Закатано</div>
+          <div class="stat-value"><span id="jarsValue">0</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ключ</div>
+          <div class="stat-value"><span id="keyValue">20/20</span></div>
         </div>
       </div>
 
       <div class="tap-main">
-        <div class="combo-badge" id="comboBadge">КОМБО!</div>
-        <div class="jar-wrap" id="jarWrap">
+        <div class="combo-badge" id="comboBadge">Комбо x2</div>
+
+        <div class="jar-stage" id="jarStage">
           <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="130" cy="235" rx="70" ry="10" fill="#000" opacity="0.25"/>
             <path d="M75 95 Q75 78 95 78 L165 78 Q185 78 185 95 L192 205 Q192 228 165 228 L95 228 Q68 228 68 205 Z"
                   fill="url(#glassGrad)" stroke="#7fa476" stroke-width="3"/>
             <path d="M85 130 Q130 145 175 130 L172 190 Q130 205 88 190 Z" fill="var(--jar-glass-2)" opacity="0.55"/>
             <rect x="88" y="60" width="84" height="24" rx="6" fill="#8f9a86" stroke="#6b756a" stroke-width="2"/>
-            <g class="lidGroup">
+            <g id="lidGroup">
               <ellipse cx="130" cy="58" rx="46" ry="16" fill="url(#lidGrad)" stroke="var(--lid-dark)" stroke-width="3"/>
               <ellipse cx="130" cy="54" rx="38" ry="11" fill="none" stroke="#7a5d22" stroke-width="2" opacity="0.5"/>
             </g>
@@ -566,14 +625,30 @@
               </radialGradient>
             </defs>
           </svg>
+
+          <div class="points-layer" id="pointsLayer"></div>
+          <div class="wrench-icon" id="wrenchIcon">🔧</div>
+
+          <div class="key-overlay" id="keyOverlay">
+            <div class="big-emoji">🔧💥</div>
+            <div class="kt">Ключ зламався!</div>
+            <div class="ks">Потрібен новий ключ, щоб продовжити</div>
+            <button class="cta-btn" id="newKeyBtn">Взяти новий ключ</button>
+          </div>
         </div>
-        <div class="hint" id="hint">Тапай по банці, щоб закрутити!</div>
+
+        <div class="hint" id="hint">Тисни на точку, коли вона світиться!</div>
       </div>
 
       <div class="tap-footer">
-        <div class="energy-label"><span>Енергія</span><span id="energyText">100/100</span></div>
-        <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
-        <div class="best-row">Рекорд за сесію: <span id="bestValue">0</span> кришок</div>
+        <div class="bar-row">
+          <div class="bar-label"><span>Енергія</span><span id="energyText">100/100</span></div>
+          <div class="bar-track"><div class="bar-fill" id="energyFill"></div></div>
+        </div>
+        <div class="bar-row" style="margin-bottom:0;">
+          <div class="bar-label"><span>Міцність ключа</span><span id="keyText">20/20</span></div>
+          <div class="bar-track"><div class="bar-fill key" id="keyFill"></div></div>
+        </div>
       </div>
     </div>
 
@@ -614,28 +689,34 @@
     }catch(e){}
   }
 
-  var STORAGE_KEY = 'zakrutqi_state_v1';
+  var STORAGE_KEY = 'zakrutqi_state_v2';
   var MAX_ENERGY = 100;
-  var REGEN_MS_PER_POINT = 600;
-  var COMBO_WINDOW_MS = 350;
-  var COMBO_STEP = 5;
-  var MAX_MULTIPLIER = 5;
+  var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s -> full refill in 60s
   var XP_PER_LEVEL = 500;
+
+  var POINTS_COUNT = 8;
+  var ACTIVE_WINDOW_MS = 900;
+  var MAX_MISSES_PER_JAR = 3;
+  var KEY_MAX_DURABILITY = 20;
+  var ENERGY_COST_PER_JAR = 10;
+  var BASE_REWARD = 6;
 
   var state = {
     caps: 0,
-    best: 0,
+    jarsSealed: 0,
     energy: MAX_ENERGY,
-    lastRegenTs: Date.now()
+    lastRegenTs: Date.now(),
+    keyDurability: KEY_MAX_DURABILITY
   };
 
   try{
     var saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
     if(saved && typeof saved === 'object'){
       state.caps = saved.caps || 0;
-      state.best = saved.best || 0;
+      state.jarsSealed = saved.jarsSealed || 0;
       state.energy = (typeof saved.energy === 'number') ? saved.energy : MAX_ENERGY;
       state.lastRegenTs = saved.lastRegenTs || Date.now();
+      state.keyDurability = (typeof saved.keyDurability === 'number') ? saved.keyDurability : KEY_MAX_DURABILITY;
     }
   }catch(e){}
 
@@ -660,40 +741,92 @@
   // ---------- elements ----------
   var capsValueEl = document.getElementById('capsValue');
   var capsValueTopEl = document.getElementById('capsValueTop');
-  var comboValueEl = document.getElementById('comboValue');
+  var jarsValueEl = document.getElementById('jarsValue');
+  var keyValueEl = document.getElementById('keyValue');
   var comboBadgeEl = document.getElementById('comboBadge');
-  var bestValueEl = document.getElementById('bestValue');
   var energyFillEl = document.getElementById('energyFill');
   var energyTextEl = document.getElementById('energyText');
-  var jarWrapEl = document.getElementById('jarWrap');
+  var keyFillEl = document.getElementById('keyFill');
+  var keyTextEl = document.getElementById('keyText');
   var hintEl = document.getElementById('hint');
   var levelLabelEl = document.getElementById('levelLabel');
   var levelXpLabelEl = document.getElementById('levelXpLabel');
   var levelFillEl = document.getElementById('levelFill');
   var toastEl = document.getElementById('toast');
+  var pointsLayerEl = document.getElementById('pointsLayer');
+  var wrenchEl = document.getElementById('wrenchIcon');
+  var keyOverlayEl = document.getElementById('keyOverlay');
+  var jarStageEl = document.getElementById('jarStage');
 
-  var comboCount = 0;
-  var lastTapTs = 0;
-  var comboBadgeTimer = null;
   var toastTimer = null;
+  var comboBadgeTimer = null;
 
-  function currentMultiplier(){
-    return Math.min(MAX_MULTIPLIER, 1 + Math.floor(comboCount / COMBO_STEP));
+  // ---------- build the 8 tap points around the lid ----------
+  var pointEls = [];
+  (function buildPoints(){
+    for(var i=0;i<POINTS_COUNT;i++){
+      var angle = (-90 + (360/POINTS_COUNT)*i) * Math.PI/180;
+      var px = 130 + 58*Math.cos(angle);
+      var py = 58 + 24*Math.sin(angle);
+      var d = document.createElement('div');
+      d.className = 'point-dot';
+      d.style.left = (px/260*100) + '%';
+      d.style.top = (py/260*100) + '%';
+      var ring = document.createElement('div');
+      ring.className = 'ring';
+      d.appendChild(ring);
+      (function(idx, el, ringEl){
+        function tryHit(){ onDotTap(idx); }
+        el.addEventListener('touchstart', function(e){ e.preventDefault(); tryHit(); }, {passive:false});
+        el.addEventListener('mousedown', function(e){ tryHit(); });
+        el._ring = ringEl;
+      })(i, d, ring);
+      pointsLayerEl.appendChild(d);
+      pointEls.push(d);
+    }
+  })();
+
+  function pointPos(i){
+    var angle = (-90 + (360/POINTS_COUNT)*i) * Math.PI/180;
+    var px = 130 + 58*Math.cos(angle);
+    var py = 58 + 24*Math.sin(angle);
+    return { x: px/260*100, y: py/260*100 };
+  }
+
+  function moveWrenchTo(i){
+    var p = pointPos(i);
+    wrenchEl.style.left = p.x + '%';
+    wrenchEl.style.top = p.y + '%';
+  }
+
+  // ---------- jar / sequence state ----------
+  var jar = {
+    active: false,
+    sequenceIndex: 0,
+    missesThisJar: 0,
+    comboThisJar: 0
+  };
+  var activeTimer = null;
+  var screenIsTap = false;
+
+  function clearDotClasses(){
+    pointEls.forEach(function(el){ el.classList.remove('active','hit','miss'); });
   }
 
   function render(){
     capsValueEl.textContent = state.caps;
     capsValueTopEl.textContent = state.caps;
-    bestValueEl.textContent = state.best;
-    comboValueEl.textContent = currentMultiplier();
+    jarsValueEl.textContent = state.jarsSealed;
+    keyValueEl.textContent = state.keyDurability + '/' + KEY_MAX_DURABILITY;
 
-    var pct = Math.round((state.energy / MAX_ENERGY) * 100);
-    energyFillEl.style.width = pct + '%';
+    var epct = Math.round((state.energy / MAX_ENERGY) * 100);
+    energyFillEl.style.width = epct + '%';
     energyTextEl.textContent = Math.floor(state.energy) + '/' + MAX_ENERGY;
-    if(pct <= 20){ energyFillEl.classList.add('low'); } else { energyFillEl.classList.remove('low'); }
-    hintEl.textContent = state.energy <= 0
-      ? 'Енергія закінчилась — зачекай, поки відновиться'
-      : 'Тапай по банці, щоб закрутити!';
+    if(epct <= 20){ energyFillEl.classList.add('low'); } else { energyFillEl.classList.remove('low'); }
+
+    var kpct = Math.round((state.keyDurability / KEY_MAX_DURABILITY) * 100);
+    keyFillEl.style.width = kpct + '%';
+    keyTextEl.textContent = state.keyDurability + '/' + KEY_MAX_DURABILITY;
 
     var level = 1 + Math.floor(state.caps / XP_PER_LEVEL);
     var xpInLevel = state.caps % XP_PER_LEVEL;
@@ -702,73 +835,175 @@
     levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
   }
 
-  function spawnFloatPop(text, x, y){
+  function spawnFloatPop(text, xClient, yClient){
     var el = document.createElement('div');
     el.className = 'float-pop';
     el.textContent = text;
-    el.style.left = x + 'px';
-    el.style.top = y + 'px';
+    el.style.left = xClient + 'px';
+    el.style.top = yClient + 'px';
     document.body.appendChild(el);
-    setTimeout(function(){ el.remove(); }, 700);
+    setTimeout(function(){ el.remove(); }, 800);
   }
 
-  function handleTap(evt){
-    regenEnergy();
-    if(state.energy < 1){
-      render();
-      save();
-      if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+  function stageCenterClient(){
+    var r = jarStageEl.getBoundingClientRect();
+    return { x: r.left + r.width/2 - 10, y: r.top + r.height/2 - 10 };
+  }
+
+  function showToast(text){
+    clearTimeout(toastTimer);
+    toastEl.textContent = text;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1500);
+  }
+
+  function showComboBadge(n){
+    if(n < 2){ comboBadgeEl.classList.remove('show'); return; }
+    comboBadgeEl.textContent = 'Комбо x' + n;
+    comboBadgeEl.classList.add('show');
+    clearTimeout(comboBadgeTimer);
+    comboBadgeTimer = setTimeout(function(){ comboBadgeEl.classList.remove('show'); }, 900);
+  }
+
+  // ---------- core sequence flow ----------
+  function activatePoint(i){
+    clearTimeout(activeTimer);
+    clearDotClasses();
+    var pt = pointEls[i];
+    pt.classList.add('active');
+    moveWrenchTo(i);
+    var ring = pt._ring;
+    ring.style.animation = 'none';
+    void ring.offsetWidth;
+    ring.style.animation = 'shrinkRing ' + ACTIVE_WINDOW_MS + 'ms linear forwards';
+    hintEl.textContent = 'Тисни на точку, поки вона світиться!';
+    activeTimer = setTimeout(function(){ onDotResult(i, false); }, ACTIVE_WINDOW_MS);
+  }
+
+  function onDotTap(i){
+    if(!jar.active) return;
+    if(i !== jar.sequenceIndex) return;
+    var pt = pointEls[i];
+    if(!pt.classList.contains('active')) return;
+    onDotResult(i, true);
+  }
+
+  function onDotResult(i, success){
+    clearTimeout(activeTimer);
+    var pt = pointEls[i];
+    pt.classList.remove('active');
+
+    if(success){
+      pt.classList.add('hit');
+      jar.comboThisJar++;
+      showComboBadge(jar.comboThisJar);
+      if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+
+      var next = i + 1;
+      if(next >= POINTS_COUNT){
+        sealJar();
+      } else {
+        jar.sequenceIndex = next;
+        setTimeout(function(){ if(jar.active) activatePoint(next); }, 110);
+      }
       return;
     }
 
-    var now = Date.now();
-    if(now - lastTapTs <= COMBO_WINDOW_MS){ comboCount++; } else { comboCount = 1; }
-    lastTapTs = now;
-
-    var mult = currentMultiplier();
-    var gained = 1 * mult;
-
-    state.energy = Math.max(0, state.energy - 1);
-    state.caps += gained;
-    if(state.caps > state.best) state.best = state.caps;
-
+    // miss
+    pt.classList.add('miss');
+    jar.missesThisJar++;
+    jar.comboThisJar = 0;
+    showComboBadge(0);
+    state.keyDurability = Math.max(0, state.keyDurability - 1);
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     render();
     save();
 
-    jarWrapEl.classList.add('tapped');
-    setTimeout(function(){ jarWrapEl.classList.remove('tapped'); }, 90);
-
-    if(mult > 1){
-      comboBadgeEl.classList.add('show');
-      clearTimeout(comboBadgeTimer);
-      comboBadgeTimer = setTimeout(function(){ comboBadgeEl.classList.remove('show'); }, 400);
+    if(state.keyDurability <= 0){
+      jar.active = false;
+      keyOverlayEl.classList.add('show');
+      hintEl.textContent = 'Ключ зламався — потрібен новий';
+      return;
     }
 
-    var rect = jarWrapEl.getBoundingClientRect();
-    var touchX = rect.left + rect.width/2;
-    var touchY = rect.top + rect.height/2;
-    if(evt && evt.changedTouches && evt.changedTouches[0]){
-      touchX = evt.changedTouches[0].clientX;
-      touchY = evt.changedTouches[0].clientY;
-    } else if(evt && typeof evt.clientX === 'number'){
-      touchX = evt.clientX;
-      touchY = evt.clientY;
+    if(jar.missesThisJar >= MAX_MISSES_PER_JAR){
+      ruinLid();
+      return;
     }
-    spawnFloatPop('+' + gained, touchX - 12, touchY - 20);
 
-    if(tg && tg.HapticFeedback){
-      tg.HapticFeedback.impactOccurred(mult >= MAX_MULTIPLIER ? 'heavy' : (mult > 1 ? 'medium' : 'light'));
-    }
+    hintEl.textContent = 'Промах! Спробуй ще раз ту саму точку';
+    setTimeout(function(){ if(jar.active) activatePoint(i); }, 260);
   }
 
-  jarWrapEl.addEventListener('touchstart', function(e){ e.preventDefault(); handleTap(e); }, {passive:false});
-  jarWrapEl.addEventListener('mousedown', function(e){ handleTap(e); });
+  function ruinLid(){
+    jar.missesThisJar = 0;
+    jar.comboThisJar = 0;
+    jar.sequenceIndex = 0;
+    clearDotClasses();
+    showToast('Кришка зіпсована! Беремо нову 🫙');
+    hintEl.textContent = 'Нова кришка — починаємо закрутку заново';
+    setTimeout(function(){ if(jar.active) activatePoint(0); }, 550);
+  }
 
+  function sealJar(){
+    jar.active = false;
+    clearDotClasses();
+    var perfect = jar.missesThisJar === 0;
+    var comboBonus = 1 + Math.min(1.4, jar.comboThisJar * 0.05);
+    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1));
+
+    state.caps += reward;
+    state.jarsSealed += 1;
+    render();
+    save();
+
+    var c = stageCenterClient();
+    spawnFloatPop('+' + reward + (perfect ? ' 💯' : ''), c.x, c.y);
+    hintEl.textContent = perfect ? 'Ідеально закручено!' : 'Банку закручено!';
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+
+    setTimeout(function(){ if(screenIsTap) tryStartJar(); }, 650);
+  }
+
+  function tryStartJar(){
+    if(jar.active) return;
+    if(keyOverlayEl.classList.contains('show')) return;
+    regenEnergy();
+    render();
+    save();
+    if(state.energy < ENERGY_COST_PER_JAR){
+      hintEl.textContent = 'Немає енергії — зачекай трохи ⏳';
+      return;
+    }
+    state.energy -= ENERGY_COST_PER_JAR;
+    save();
+    render();
+    jar.active = true;
+    jar.sequenceIndex = 0;
+    jar.missesThisJar = 0;
+    jar.comboThisJar = 0;
+    clearDotClasses();
+    activatePoint(0);
+  }
+
+  document.getElementById('newKeyBtn').addEventListener('click', function(){
+    state.keyDurability = KEY_MAX_DURABILITY;
+    render();
+    save();
+    keyOverlayEl.classList.remove('show');
+    jar.active = true;
+    activatePoint(jar.sequenceIndex);
+  });
+
+  // ---------- energy/key regen loop ----------
   setInterval(function(){
     regenEnergy();
     render();
     save();
-  }, 250);
+    if(screenIsTap && !jar.active && !keyOverlayEl.classList.contains('show')){
+      tryStartJar();
+    }
+  }, 700);
 
   // ---------- navigation ----------
   var screenHome = document.getElementById('screen-home');
@@ -784,8 +1019,12 @@
     if(name === 'tap'){
       screenTap.classList.add('active');
       navBanky.classList.add('active');
+      screenIsTap = true;
+      tryStartJar();
     } else {
       screenHome.classList.add('active');
+      screenIsTap = false;
+      clearTimeout(activeTimer);
     }
     if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
   }
@@ -793,14 +1032,6 @@
   navBanky.addEventListener('click', function(){ showScreen('tap'); });
   playCta.addEventListener('click', function(){ showScreen('tap'); });
   backBtn.addEventListener('click', function(){ showScreen('home'); });
-
-  function showToast(text){
-    clearTimeout(toastTimer);
-    toastEl.textContent = text;
-    toastEl.classList.add('show');
-    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1400);
-    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
-  }
 
   document.querySelectorAll('[data-soon]').forEach(function(el){
     el.addEventListener('click', function(){
