@@ -200,6 +200,7 @@
     padding:8px 16px;
     font-size:12px;
   }
+  .cta-btn.small{ padding:7px 12px; font-size:12px; border-radius:10px; }
 
   .section-label{
     font-size:11px;
@@ -286,6 +287,22 @@
     justify-content:center;
     gap:4px;
   }
+  .cellar-banner{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:linear-gradient(120deg,#22384a,#243527);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:8px 12px;
+    margin-bottom:6px;
+    cursor:pointer;
+  }
+  .cellar-banner .emoji{ font-size:20px; flex-shrink:0; }
+  .cellar-text{ flex:1; min-width:0; }
+  .cellar-text .cm{ font-size:12.5px; font-weight:700; }
+  .cellar-text .cs{ font-size:10.5px; color:var(--text-dim); }
   .recipe-line{
     width:100%;
     text-align:center;
@@ -552,6 +569,25 @@
     padding:10px 0 4px;
   }
 
+  /* ---- UPGRADES SCREEN ---- */
+  .upgr-card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .upgr-card .ue{ font-size:26px; flex-shrink:0; }
+  .upgr-info{ flex:1; min-width:0; }
+  .upgr-name{ font-weight:800; font-size:13.5px; }
+  .upgr-desc{ font-size:11px; color:var(--text-dim); margin:2px 0 4px; }
+  .upgr-level{ font-size:10.5px; color:var(--accent-2); }
+  .upgr-buy{ flex-shrink:0; text-align:center; }
+  .upgr-buy .cost{ font-size:10.5px; color:var(--text-dim); margin-top:3px; display:flex; align-items:center; gap:3px; justify-content:center; }
+
   /* ---------- BOTTOM NAV ---------- */
   .bottom-nav{
     height:var(--nav-h);
@@ -681,6 +717,10 @@
           <span class="emoji">🧄</span>
           <span class="label">Інгредієнти</span>
         </div>
+        <div class="quick-card" id="upgrCard">
+          <span class="emoji">🛠️</span>
+          <span class="label">Апгрейди</span>
+        </div>
         <div class="quick-card" data-soon="Рейтинги">
           <span class="soon-dot"></span>
           <span class="emoji">🏆</span>
@@ -723,6 +763,14 @@
         <div class="stat-card">
           <div class="stat-label">Ключ</div>
           <div class="stat-value"><span id="keyValue">20/20</span></div>
+        </div>
+      </div>
+
+      <div class="cellar-banner" id="cellarBanner">
+        <span class="emoji">🧊</span>
+        <div class="cellar-text">
+          <div class="cm" id="cellarMain">Льох порожній</div>
+          <div class="cs" id="cellarSub">Закручені банки визрівають тут перед продажем</div>
         </div>
       </div>
 
@@ -823,6 +871,16 @@
       <div class="ingr-grid" id="shopGrid"></div>
     </div>
 
+    <!-- UPGRADES -->
+    <div class="screen" id="screen-upgr">
+      <div class="tap-topline">
+        <button class="back-btn" id="backBtnUpgr">←</button>
+        <div style="font-weight:800;font-size:14px;">Апгрейди льоху</div>
+      </div>
+      <div class="subtitle" style="margin:4px 0 14px;text-align:left;">Покращуй інструменти за кришки — прогрес зберігається назавжди</div>
+      <div id="upgradesList"></div>
+    </div>
+
   </div>
 
   <div class="toast" id="toast"></div>
@@ -831,8 +889,8 @@
     <button class="nav-btn" data-soon="Арена">
       <span class="nav-emoji">⚔️</span>Арена
     </button>
-    <button class="nav-btn" data-soon="Гільдія">
-      <span class="nav-emoji">🛡️</span>Гільдія
+    <button class="nav-btn" id="navUpgr">
+      <span class="nav-emoji">🛠️</span>Апгрейд
     </button>
     <button class="nav-btn primary" id="navBanky">
       <span class="nav-emoji">🫙</span>Банки
@@ -860,44 +918,64 @@
     }catch(e){}
   }
 
-  var STORAGE_KEY = 'zakrutqi_state_v3';
-  var MAX_ENERGY = 100;
-  var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s -> full refill in 60s
+  var STORAGE_KEY = 'zakrutqi_state_v4';
+  var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s at base
   var XP_PER_LEVEL = 500;
 
   var POINTS_COUNT = 8;
-  var ACTIVE_WINDOW_MS = 900;
-  var MAX_MISSES_PER_JAR = 3;
-  var KEY_MAX_DURABILITY = 20;
   var ENERGY_COST_PER_JAR = 10;
   var BASE_REWARD = 6;
 
+  // ---- upgradeable base values ----
+  var KEY_BASE_DURABILITY = 20;
+  var LID_BASE_TOLERANCE = 3;
+  var ACTIVE_WINDOW_BASE = 900;
+  var ENERGY_BASE_MAX = 100;
+  var STERILIZE_BASE_MS = 90 * 1000;
+
+  var UPGRADES = [
+    {id:'keyDura', name:'Загартований ключ', desc:'Більше міцності ключа за один захід', emoji:'🔧', baseCost:15, maxLevel:5, step:5, unit:'міцності'},
+    {id:'lidTolerance', name:'Якісні кришки', desc:'Більше допустимих промахів, перш ніж кришка псується', emoji:'🫙', baseCost:20, maxLevel:3, step:1, unit:'промах'},
+    {id:'reflexTime', name:'Спритні руки', desc:'Більше часу, щоб влучити в точку', emoji:'⏱️', baseCost:18, maxLevel:5, step:100, unit:'мс'},
+    {id:'cellarSpeed', name:'Швидший льох', desc:'Банки визрівають (стерилізуються) швидше', emoji:'🧊', baseCost:25, maxLevel:5, step:10, unit:'с'},
+    {id:'energyMax', name:'Просторий погріб', desc:'Більше максимальної енергії', emoji:'⚡', baseCost:20, maxLevel:5, step:20, unit:'енергії'}
+  ];
+  function findUpgrade(id){
+    for(var i=0;i<UPGRADES.length;i++){ if(UPGRADES[i].id===id) return UPGRADES[i]; }
+    return null;
+  }
+  function upgradeLevel(id){ return state.upgrades[id] || 0; }
+  function upgradeCost(def){
+    var level = upgradeLevel(def.id);
+    return Math.round(def.baseCost * Math.pow(level+1, 1.35));
+  }
+  function keyMaxDurability(){ return KEY_BASE_DURABILITY + upgradeLevel('keyDura')*5; }
+  function maxMissesPerJar(){ return LID_BASE_TOLERANCE + upgradeLevel('lidTolerance')*1; }
+  function activeWindowMs(){ return ACTIVE_WINDOW_BASE + upgradeLevel('reflexTime')*100; }
+  function maxEnergy(){ return ENERGY_BASE_MAX + upgradeLevel('energyMax')*20; }
+  function sterilizeMs(){ return Math.max(20000, STERILIZE_BASE_MS - upgradeLevel('cellarSpeed')*10000); }
+
   // ---------- ingredient catalog ----------
   var INGREDIENTS = [
-    // Зима
     {id:'cabbage', name:'Капуста',  emoji:'🥬', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
     {id:'carrot',  name:'Морква',   emoji:'🥕', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
     {id:'potato',  name:'Картопля', emoji:'🥔', cat:'main', season:'Зима', rare:false, price:3,  bonus:0.07},
     {id:'beet',    name:'Буряк',    emoji:'🍠', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
     {id:'pumpkin', name:'Гарбуз',   emoji:'🎃', cat:'main', season:'Зима', rare:true,  price:12, bonus:0.2},
-    // Весна
     {id:'garlic',  name:'Часник',   emoji:'🧄', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
     {id:'dill',    name:'Кріп',     emoji:'🌿', cat:'main', season:'Весна', rare:false, price:3,  bonus:0.07},
     {id:'spinach', name:'Шпинат',   emoji:'🥦', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
     {id:'radish',  name:'Редиска',  emoji:'🌷', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
     {id:'asparagus', name:'Спаржа', emoji:'🎍', cat:'main', season:'Весна', rare:true,  price:12, bonus:0.2},
-    // Літо
     {id:'cucumber', name:'Огірок',  emoji:'🥒', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
     {id:'tomato',   name:'Помідор', emoji:'🍅', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
     {id:'bellpepper', name:'Перець', emoji:'🫑', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
     {id:'strawberry', name:'Полуниця', emoji:'🍓', cat:'main', season:'Літо', rare:true, price:12, bonus:0.2},
     {id:'raspberry', name:'Малина', emoji:'🫐', cat:'main', season:'Літо', rare:true,  price:12, bonus:0.2},
-    // Осінь
     {id:'apple',   name:'Яблуко',   emoji:'🍎', cat:'main', season:'Осінь', rare:false, price:4,  bonus:0.08},
     {id:'pear',    name:'Груша',    emoji:'🍐', cat:'main', season:'Осінь', rare:false, price:4,  bonus:0.08},
     {id:'mushroom',name:'Гриби',    emoji:'🍄', cat:'main', season:'Осінь', rare:false, price:5,  bonus:0.09},
     {id:'grape',   name:'Виноград', emoji:'🍇', cat:'main', season:'Осінь', rare:true,  price:12, bonus:0.2},
-    // Спеції (завжди в крамниці)
     {id:'salt',    name:'Сіль',           emoji:'🧂', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
     {id:'pepper',  name:'Перець мелений', emoji:'🌶️', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
     {id:'sugar',   name:'Цукор',          emoji:'🍥', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
@@ -920,11 +998,13 @@
   var state = {
     caps: 0,
     jarsSealed: 0,
-    energy: MAX_ENERGY,
+    energy: ENERGY_BASE_MAX,
     lastRegenTs: Date.now(),
-    keyDurability: KEY_MAX_DURABILITY,
+    keyDurability: KEY_BASE_DURABILITY,
     inventory: { cucumber:4, tomato:4, salt:3, pepper:2 },
-    selectedRecipe: { mainId:null, spiceId:null }
+    selectedRecipe: { mainId:null, spiceId:null },
+    upgrades: {},
+    cellar: []
   };
 
   try{
@@ -932,11 +1012,13 @@
     if(saved && typeof saved === 'object'){
       state.caps = saved.caps || 0;
       state.jarsSealed = saved.jarsSealed || 0;
-      state.energy = (typeof saved.energy === 'number') ? saved.energy : MAX_ENERGY;
       state.lastRegenTs = saved.lastRegenTs || Date.now();
-      state.keyDurability = (typeof saved.keyDurability === 'number') ? saved.keyDurability : KEY_MAX_DURABILITY;
       state.inventory = saved.inventory || state.inventory;
       state.selectedRecipe = saved.selectedRecipe || { mainId:null, spiceId:null };
+      state.upgrades = saved.upgrades || {};
+      state.cellar = saved.cellar || [];
+      state.energy = (typeof saved.energy === 'number') ? saved.energy : ENERGY_BASE_MAX;
+      state.keyDurability = (typeof saved.keyDurability === 'number') ? saved.keyDurability : KEY_BASE_DURABILITY;
     }
   }catch(e){}
 
@@ -946,14 +1028,15 @@
 
   function regenEnergy(){
     var now = Date.now();
+    var cap = maxEnergy();
     var elapsed = now - state.lastRegenTs;
-    if(state.energy < MAX_ENERGY && elapsed > 0){
+    if(state.energy < cap && elapsed > 0){
       var points = Math.floor(elapsed / REGEN_MS_PER_POINT);
       if(points > 0){
-        state.energy = Math.min(MAX_ENERGY, state.energy + points);
+        state.energy = Math.min(cap, state.energy + points);
         state.lastRegenTs = state.lastRegenTs + points * REGEN_MS_PER_POINT;
       }
-    } else if(state.energy >= MAX_ENERGY){
+    } else if(state.energy >= cap){
       state.lastRegenTs = now;
     }
   }
@@ -978,6 +1061,9 @@
   var keyOverlayEl = document.getElementById('keyOverlay');
   var jarStageEl = document.getElementById('jarStage');
   var recipeLineEl = document.getElementById('recipeLine');
+  var cellarBannerEl = document.getElementById('cellarBanner');
+  var cellarMainEl = document.getElementById('cellarMain');
+  var cellarSubEl = document.getElementById('cellarSub');
 
   var toastTimer = null;
   var comboBadgeTimer = null;
@@ -1036,20 +1122,73 @@
     pointEls.forEach(function(el){ el.classList.remove('active','hit','miss'); });
   }
 
+  function fmtTime(ms){
+    if(ms < 0) ms = 0;
+    var s = Math.ceil(ms/1000);
+    var m = Math.floor(s/60);
+    var r = s % 60;
+    return m + ':' + (r<10?'0':'') + r;
+  }
+
+  function renderCellarBanner(){
+    var now = Date.now();
+    var pending = state.cellar.filter(function(e){ return e.readyAt > now; });
+    var ready = state.cellar.filter(function(e){ return e.readyAt <= now; });
+    var readySum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
+
+    if(state.cellar.length === 0){
+      cellarMainEl.textContent = 'Льох порожній';
+      cellarSubEl.textContent = 'Закручені банки визрівають тут перед продажем';
+      return;
+    }
+    if(readySum > 0){
+      cellarMainEl.textContent = '🧊 Готово: ' + ready.length + ' банок (+' + readySum + ' кришок)';
+      cellarSubEl.textContent = 'Тисни, щоб забрати';
+    } else {
+      var nearest = pending.reduce(function(m,e){ return Math.min(m, e.readyAt-now); }, Infinity);
+      cellarMainEl.textContent = 'У стерилізації: ' + pending.length + ' банок';
+      cellarSubEl.textContent = 'Найближча через ' + fmtTime(nearest) + ' — тисни, щоб прискорити за 3 🧂';
+    }
+  }
+
+  cellarBannerEl.addEventListener('click', function(){
+    var now = Date.now();
+    var ready = state.cellar.filter(function(e){ return e.readyAt <= now; });
+    var readySum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
+    if(readySum > 0){
+      state.cellar = state.cellar.filter(function(e){ return e.readyAt > now; });
+      state.caps += readySum;
+      save(); render();
+      showToast('Забрано ' + readySum + ' кришок 🧂');
+      if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+      return;
+    }
+    var pending = state.cellar.filter(function(e){ return e.readyAt > now; }).sort(function(a,b){ return a.readyAt-b.readyAt; });
+    if(!pending.length) return;
+    if(state.caps < 3){ showToast('Не вистачає кришок для прискорення'); return; }
+    state.caps -= 3;
+    pending[0].readyAt = Math.max(now, pending[0].readyAt - 30000);
+    save(); render();
+    showToast('Прискорено на 30с ⏩');
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+  });
+
   function render(){
     capsValueEl.textContent = state.caps;
     capsValueTopEl.textContent = state.caps;
     jarsValueEl.textContent = state.jarsSealed;
-    keyValueEl.textContent = state.keyDurability + '/' + KEY_MAX_DURABILITY;
+    keyValueEl.textContent = state.keyDurability + '/' + keyMaxDurability();
 
-    var epct = Math.round((state.energy / MAX_ENERGY) * 100);
+    var cap = maxEnergy();
+    var epct = Math.round((state.energy / cap) * 100);
     energyFillEl.style.width = epct + '%';
-    energyTextEl.textContent = Math.floor(state.energy) + '/' + MAX_ENERGY;
+    energyTextEl.textContent = Math.floor(state.energy) + '/' + cap;
     if(epct <= 20){ energyFillEl.classList.add('low'); } else { energyFillEl.classList.remove('low'); }
 
-    var kpct = Math.round((state.keyDurability / KEY_MAX_DURABILITY) * 100);
+    var kmax = keyMaxDurability();
+    var kpct = Math.round((state.keyDurability / kmax) * 100);
     keyFillEl.style.width = kpct + '%';
-    keyTextEl.textContent = state.keyDurability + '/' + KEY_MAX_DURABILITY;
+    keyTextEl.textContent = state.keyDurability + '/' + kmax;
 
     var level = 1 + Math.floor(state.caps / XP_PER_LEVEL);
     var xpInLevel = state.caps % XP_PER_LEVEL;
@@ -1058,6 +1197,8 @@
     levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
 
     recipeLineEl.innerHTML = 'Рецепт: <b>' + jar.recipeLabel + '</b>' + (jar.recipeMult > 1 ? ' (+' + Math.round((jar.recipeMult-1)*100) + '%)' : '');
+
+    renderCellarBanner();
   }
 
   function spawnFloatPop(text, xClient, yClient){
@@ -1108,11 +1249,12 @@
     pt.classList.add('active');
     moveWrenchTo(i);
     var ring = pt._ring;
+    var winMs = activeWindowMs();
     ring.style.animation = 'none';
     void ring.offsetWidth;
-    ring.style.animation = 'shrinkRing ' + ACTIVE_WINDOW_MS + 'ms linear forwards';
+    ring.style.animation = 'shrinkRing ' + winMs + 'ms linear forwards';
     hintEl.textContent = 'Тисни на точку, поки вона світиться!';
-    activeTimer = setTimeout(function(){ onDotResult(i, false); }, ACTIVE_WINDOW_MS);
+    activeTimer = setTimeout(function(){ onDotResult(i, false); }, winMs);
   }
 
   function onDotTap(i){
@@ -1144,7 +1286,6 @@
       return;
     }
 
-    // miss
     pt.classList.add('miss');
     jar.missesThisJar++;
     jar.comboThisJar = 0;
@@ -1161,7 +1302,7 @@
       return;
     }
 
-    if(jar.missesThisJar >= MAX_MISSES_PER_JAR){
+    if(jar.missesThisJar >= maxMissesPerJar()){
       ruinLid();
       return;
     }
@@ -1187,14 +1328,14 @@
     var comboBonus = 1 + Math.min(1.4, jar.comboThisJar * 0.05);
     var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult);
 
-    state.caps += reward;
+    state.cellar.push({ readyAt: Date.now() + sterilizeMs(), reward: reward, label: jar.recipeLabel });
     state.jarsSealed += 1;
     render();
     save();
 
     var c = stageCenterClient();
-    spawnFloatPop('+' + reward + (perfect ? ' 💯' : ''), c.x, c.y);
-    hintEl.textContent = perfect ? 'Ідеально закручено!' : 'Банку закручено!';
+    spawnFloatPop('+' + reward + ' 🧊', c.x, c.y);
+    hintEl.textContent = perfect ? 'Ідеально! Банка в льоху на стерилізації' : 'Банку відправлено в льох';
     if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
 
     setTimeout(function(){ if(screenIsTap) tryStartJar(); }, 650);
@@ -1236,7 +1377,7 @@
   }
 
   document.getElementById('newKeyBtn').addEventListener('click', function(){
-    state.keyDurability = KEY_MAX_DURABILITY;
+    state.keyDurability = keyMaxDurability();
     render();
     save();
     keyOverlayEl.classList.remove('show');
@@ -1244,7 +1385,7 @@
     activatePoint(jar.sequenceIndex);
   });
 
-  // ---------- energy/key regen loop ----------
+  // ---------- ticking loop (energy/key regen + cellar countdown) ----------
   setInterval(function(){
     regenEnergy();
     render();
@@ -1269,7 +1410,6 @@
     seasonEmojiEl.textContent = SEASON_EMOJI[season];
     seasonTitleEl.textContent = 'Зараз: ' + season;
 
-    // inventory
     invGridEl.innerHTML = '';
     var anyOwned = false;
     INGREDIENTS.forEach(function(item){
@@ -1293,7 +1433,6 @@
     });
     invEmptyHintEl.style.display = anyOwned ? 'none' : 'block';
 
-    // shop: spices always + main items matching current season
     shopGridEl.innerHTML = '';
     INGREDIENTS.filter(function(item){ return item.cat === 'spice' || item.season === season; })
       .forEach(function(item){
@@ -1313,7 +1452,6 @@
         shopGridEl.appendChild(tile);
       });
 
-    // recipe slots summary
     var main = state.selectedRecipe.mainId ? findIngredient(state.selectedRecipe.mainId) : null;
     var spice = state.selectedRecipe.spiceId ? findIngredient(state.selectedRecipe.spiceId) : null;
     slotMainEl.className = 'recipe-slot' + (main ? ' filled' : '');
@@ -1337,23 +1475,87 @@
     showToast('Рецепт скинуто — звичайна закрутка');
   });
 
+  // ---------- upgrades screen ----------
+  var upgradesListEl = document.getElementById('upgradesList');
+
+  function upgradeEffectLine(def, level){
+    if(def.id === 'keyDura') return 'Зараз: ' + keyMaxDurability() + ' міцності';
+    if(def.id === 'lidTolerance') return 'Зараз: ' + maxMissesPerJar() + ' промахи дозволено';
+    if(def.id === 'reflexTime') return 'Зараз: ' + activeWindowMs() + ' мс на точку';
+    if(def.id === 'cellarSpeed') return 'Зараз: ' + Math.round(sterilizeMs()/1000) + ' с стерилізації';
+    if(def.id === 'energyMax') return 'Зараз: ' + maxEnergy() + ' макс. енергії';
+    return '';
+  }
+
+  function renderUpgradesScreen(){
+    upgradesListEl.innerHTML = '';
+    UPGRADES.forEach(function(def){
+      var level = upgradeLevel(def.id);
+      var maxed = level >= def.maxLevel;
+      var cost = upgradeCost(def);
+      var card = document.createElement('div');
+      card.className = 'upgr-card';
+      card.innerHTML =
+        '<div class="ue">' + def.emoji + '</div>' +
+        '<div class="upgr-info">' +
+          '<div class="upgr-name">' + def.name + '</div>' +
+          '<div class="upgr-desc">' + def.desc + '</div>' +
+          '<div class="upgr-level">Рівень ' + level + '/' + def.maxLevel + ' · ' + upgradeEffectLine(def, level) + '</div>' +
+        '</div>' +
+        '<div class="upgr-buy">' +
+          '<button class="cta-btn small" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'МАКС' : 'Покращити') + '</button>' +
+          (maxed ? '' : '<div class="cost"><span class="cap-icon" style="width:10px;height:10px;"></span>' + cost + '</div>') +
+        '</div>';
+      if(!maxed){
+        card.querySelector('button').addEventListener('click', function(){
+          buyUpgrade(def);
+        });
+      }
+      upgradesListEl.appendChild(card);
+    });
+  }
+
+  function buyUpgrade(def){
+    var level = upgradeLevel(def.id);
+    if(level >= def.maxLevel){ return; }
+    var cost = upgradeCost(def);
+    if(state.caps < cost){ showToast('Не вистачає кришок 🥫'); return; }
+    state.caps -= cost;
+    state.upgrades[def.id] = level + 1;
+
+    if(def.id === 'keyDura'){ state.keyDurability = Math.min(keyMaxDurability(), state.keyDurability + def.step); }
+    if(def.id === 'energyMax'){ state.energy = Math.min(maxEnergy(), state.energy + def.step); }
+
+    save();
+    render();
+    renderUpgradesScreen();
+    showToast(def.name + ' покращено! 🛠️');
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  }
+
   // ---------- navigation ----------
   var screenHome = document.getElementById('screen-home');
   var screenTap = document.getElementById('screen-tap');
   var screenIngr = document.getElementById('screen-ingr');
+  var screenUpgr = document.getElementById('screen-upgr');
   var navBanky = document.getElementById('navBanky');
   var navIngr = document.getElementById('navIngr');
+  var navUpgr = document.getElementById('navUpgr');
   var backBtn = document.getElementById('backBtn');
   var backBtnIngr = document.getElementById('backBtnIngr');
+  var backBtnUpgr = document.getElementById('backBtnUpgr');
   var playCta = document.getElementById('playCta');
   var ingrCard = document.getElementById('ingrCard');
+  var upgrCard = document.getElementById('upgrCard');
 
   function showScreen(name){
     screenHome.classList.remove('active');
     screenTap.classList.remove('active');
     screenIngr.classList.remove('active');
+    screenUpgr.classList.remove('active');
     navBanky.classList.remove('active');
     navIngr.classList.remove('active');
+    navUpgr.classList.remove('active');
     screenIsTap = false;
 
     if(name === 'tap'){
@@ -1365,6 +1567,10 @@
       screenIngr.classList.add('active');
       navIngr.classList.add('active');
       renderIngrScreen();
+    } else if(name === 'upgr'){
+      screenUpgr.classList.add('active');
+      navUpgr.classList.add('active');
+      renderUpgradesScreen();
     } else {
       screenHome.classList.add('active');
       clearTimeout(activeTimer);
@@ -1374,10 +1580,13 @@
 
   navBanky.addEventListener('click', function(){ showScreen('tap'); });
   navIngr.addEventListener('click', function(){ showScreen('ingr'); });
+  navUpgr.addEventListener('click', function(){ showScreen('upgr'); });
   playCta.addEventListener('click', function(){ showScreen('tap'); });
   ingrCard.addEventListener('click', function(){ showScreen('ingr'); });
+  upgrCard.addEventListener('click', function(){ showScreen('upgr'); });
   backBtn.addEventListener('click', function(){ showScreen('home'); });
   backBtnIngr.addEventListener('click', function(){ showScreen('home'); });
+  backBtnUpgr.addEventListener('click', function(){ showScreen('home'); });
 
   document.querySelectorAll('[data-soon]').forEach(function(el){
     el.addEventListener('click', function(){
