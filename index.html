@@ -311,6 +311,13 @@
     margin-bottom:4px;
   }
   .recipe-line b{ color:var(--accent-2); font-weight:700; }
+  .key-line{
+    width:100%;
+    text-align:center;
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
   .tap-main{
     flex:1;
     width:100%;
@@ -384,10 +391,25 @@
     display:flex;align-items:center;justify-content:center;
     font-size:20px;
     transform:translate(-50%,-50%);
-    transition:left .2s ease, top .2s ease;
+    transition:left .2s ease, top .2s ease, opacity .2s ease;
     pointer-events:none;
     z-index:4;
     filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  }
+  .auto-glow{
+    position:absolute;
+    inset:-6px;
+    border-radius:50%;
+    border:3px solid var(--accent-2);
+    opacity:0;
+    animation:none;
+    pointer-events:none;
+  }
+  .jar-stage.auto-mode .auto-glow{ opacity:1; animation:autoPulse 1.2s ease-in-out infinite; }
+  @keyframes autoPulse{
+    0%{ transform:scale(.9); opacity:.7; }
+    50%{ transform:scale(1.04); opacity:.25; }
+    100%{ transform:scale(.9); opacity:.7; }
   }
   .key-overlay{
     position:absolute;
@@ -580,6 +602,7 @@
     gap:12px;
     margin-bottom:10px;
   }
+  .upgr-card.equipped{ border-color:var(--accent-2); }
   .upgr-card .ue{ font-size:26px; flex-shrink:0; }
   .upgr-info{ flex:1; min-width:0; }
   .upgr-name{ font-weight:800; font-size:13.5px; }
@@ -587,6 +610,28 @@
   .upgr-level{ font-size:10.5px; color:var(--accent-2); }
   .upgr-buy{ flex-shrink:0; text-align:center; }
   .upgr-buy .cost{ font-size:10.5px; color:var(--text-dim); margin-top:3px; display:flex; align-items:center; gap:3px; justify-content:center; }
+
+  .skin-tile{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:10px 4px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:5px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .skin-tile.equipped{ border-color:var(--accent-2); box-shadow:0 0 0 1px var(--accent-2) inset; }
+  .skin-tile .dot{
+    width:26px;height:26px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.25);
+  }
+  .skin-tile .sn{ font-size:10px; color:var(--text-dim); }
+  .skin-tile .sp{ font-size:9.5px; color:var(--accent-2); font-weight:700; }
 
   /* ---------- BOTTOM NAV ---------- */
   .bottom-nav{
@@ -775,11 +820,13 @@
       </div>
 
       <div class="recipe-line" id="recipeLine">Рецепт: <b>Звичайна закрутка</b></div>
+      <div class="key-line" id="keyLine">Ключ: Стандартний ключ</div>
 
       <div class="tap-main">
         <div class="combo-badge" id="comboBadge">Комбо x2</div>
 
         <div class="jar-stage" id="jarStage">
+          <div class="auto-glow"></div>
           <svg viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
             <ellipse cx="130" cy="235" rx="70" ry="10" fill="#000" opacity="0.25"/>
             <path d="M75 95 Q75 78 95 78 L165 78 Q185 78 185 95 L192 205 Q192 228 165 228 L95 228 Q68 228 68 205 Z"
@@ -877,8 +924,16 @@
         <button class="back-btn" id="backBtnUpgr">←</button>
         <div style="font-weight:800;font-size:14px;">Апгрейди льоху</div>
       </div>
-      <div class="subtitle" style="margin:4px 0 14px;text-align:left;">Покращуй інструменти за кришки — прогрес зберігається назавжди</div>
+      <div class="subtitle" style="margin:4px 0 14px;text-align:left;">Прогрес зберігається назавжди</div>
+
+      <div class="section-label">Покращення інструментів</div>
       <div id="upgradesList"></div>
+
+      <div class="section-label">Ключі для закрутки</div>
+      <div id="keysList"></div>
+
+      <div class="section-label">Вигляд банки</div>
+      <div class="ingr-grid" id="skinsGrid"></div>
     </div>
 
   </div>
@@ -918,15 +973,15 @@
     }catch(e){}
   }
 
-  var STORAGE_KEY = 'zakrutqi_state_v4';
-  var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s at base
+  var STORAGE_KEY = 'zakrutqi_state_v5';
+  var REGEN_MS_PER_POINT = 600;
   var XP_PER_LEVEL = 500;
 
   var POINTS_COUNT = 8;
   var ENERGY_COST_PER_JAR = 10;
   var BASE_REWARD = 6;
+  var AUTO_JAR_MS = 1300;
 
-  // ---- upgradeable base values ----
   var KEY_BASE_DURABILITY = 20;
   var LID_BASE_TOLERANCE = 3;
   var ACTIVE_WINDOW_BASE = 900;
@@ -934,28 +989,46 @@
   var STERILIZE_BASE_MS = 90 * 1000;
 
   var UPGRADES = [
-    {id:'keyDura', name:'Загартований ключ', desc:'Більше міцності ключа за один захід', emoji:'🔧', baseCost:15, maxLevel:5, step:5, unit:'міцності'},
-    {id:'lidTolerance', name:'Якісні кришки', desc:'Більше допустимих промахів, перш ніж кришка псується', emoji:'🫙', baseCost:20, maxLevel:3, step:1, unit:'промах'},
-    {id:'reflexTime', name:'Спритні руки', desc:'Більше часу, щоб влучити в точку', emoji:'⏱️', baseCost:18, maxLevel:5, step:100, unit:'мс'},
-    {id:'cellarSpeed', name:'Швидший льох', desc:'Банки визрівають (стерилізуються) швидше', emoji:'🧊', baseCost:25, maxLevel:5, step:10, unit:'с'},
-    {id:'energyMax', name:'Просторий погріб', desc:'Більше максимальної енергії', emoji:'⚡', baseCost:20, maxLevel:5, step:20, unit:'енергії'}
+    {id:'keyDura', name:'Загартований ключ', desc:'Більше міцності ключа за один захід', emoji:'🔧', baseCost:15, maxLevel:5, step:5},
+    {id:'lidTolerance', name:'Якісні кришки', desc:'Більше допустимих промахів, перш ніж кришка псується', emoji:'🫙', baseCost:20, maxLevel:3, step:1},
+    {id:'reflexTime', name:'Спритні руки', desc:'Більше часу, щоб влучити в точку', emoji:'⏱️', baseCost:18, maxLevel:5, step:100},
+    {id:'cellarSpeed', name:'Швидший льох', desc:'Банки визрівають (стерилізуються) швидше', emoji:'🧊', baseCost:25, maxLevel:5, step:10},
+    {id:'energyMax', name:'Просторий погріб', desc:'Більше максимальної енергії', emoji:'⚡', baseCost:20, maxLevel:5, step:20}
   ];
-  function findUpgrade(id){
-    for(var i=0;i<UPGRADES.length;i++){ if(UPGRADES[i].id===id) return UPGRADES[i]; }
-    return null;
-  }
   function upgradeLevel(id){ return state.upgrades[id] || 0; }
-  function upgradeCost(def){
-    var level = upgradeLevel(def.id);
-    return Math.round(def.baseCost * Math.pow(level+1, 1.35));
+  function upgradeCost(def){ return Math.round(def.baseCost * Math.pow(upgradeLevel(def.id)+1, 1.35)); }
+
+  var KEY_TYPES = [
+    {id:'standard', name:'Стандартний ключ', desc:'Базовий, нічим не поступається', emoji:'🔧', price:0,   durMult:1,    winMult:1,    rewardMult:1,    auto:false},
+    {id:'fast',     name:'Швидкий ключ',     desc:'Менше часу на точку, зате більша нагорода', emoji:'⚡', price:80,  durMult:0.75, winMult:0.65, rewardMult:1.3,  auto:false},
+    {id:'durable',  name:'Міцний ключ',      desc:'Витримує значно більше, ніж стандартний', emoji:'🛡️', price:90,  durMult:1.75, winMult:1,    rewardMult:0.9,  auto:false},
+    {id:'auto',     name:'Автоматичний ключ',desc:'Сам закручує банки без тапів — повільніше й за меншу нагороду', emoji:'🤖', price:300, durMult:1, winMult:1, rewardMult:0.55, auto:true}
+  ];
+  function findKeyType(id){ for(var i=0;i<KEY_TYPES.length;i++){ if(KEY_TYPES[i].id===id) return KEY_TYPES[i]; } return null; }
+  function activeKeyType(){ return findKeyType(state.activeKeyId) || KEY_TYPES[0]; }
+
+  var JAR_SKINS = [
+    {id:'classic',  name:'Класична',    price:0,  glass:'#cfe8c9', glass2:'#a9d69c', lid:'#c9a24a', lidDark:'#9c7a2e'},
+    {id:'amber',    name:'Бурштинова',  price:40, glass:'#f3d9a0', glass2:'#e0b866', lid:'#8a5a2e', lidDark:'#5e3c1c'},
+    {id:'frost',    name:'Морозна',     price:40, glass:'#dff3fb', glass2:'#a9d3e6', lid:'#7fa8c9', lidDark:'#4f7492'},
+    {id:'midnight', name:'Опівнічна',   price:70, glass:'#c9b8e8', glass2:'#9a82c9', lid:'#5a3f8a', lidDark:'#3a2760'}
+  ];
+  function findSkin(id){ for(var i=0;i<JAR_SKINS.length;i++){ if(JAR_SKINS[i].id===id) return JAR_SKINS[i]; } return null; }
+  function applySkin(id){
+    var s = findSkin(id) || JAR_SKINS[0];
+    var r = document.documentElement.style;
+    r.setProperty('--jar-glass', s.glass);
+    r.setProperty('--jar-glass-2', s.glass2);
+    r.setProperty('--lid', s.lid);
+    r.setProperty('--lid-dark', s.lidDark);
   }
-  function keyMaxDurability(){ return KEY_BASE_DURABILITY + upgradeLevel('keyDura')*5; }
+
+  function keyMaxDurability(){ return Math.round((KEY_BASE_DURABILITY + upgradeLevel('keyDura')*5) * activeKeyType().durMult); }
   function maxMissesPerJar(){ return LID_BASE_TOLERANCE + upgradeLevel('lidTolerance')*1; }
-  function activeWindowMs(){ return ACTIVE_WINDOW_BASE + upgradeLevel('reflexTime')*100; }
+  function activeWindowMs(){ return Math.round((ACTIVE_WINDOW_BASE + upgradeLevel('reflexTime')*100) * activeKeyType().winMult); }
   function maxEnergy(){ return ENERGY_BASE_MAX + upgradeLevel('energyMax')*20; }
   function sterilizeMs(){ return Math.max(20000, STERILIZE_BASE_MS - upgradeLevel('cellarSpeed')*10000); }
 
-  // ---------- ingredient catalog ----------
   var INGREDIENTS = [
     {id:'cabbage', name:'Капуста',  emoji:'🥬', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
     {id:'carrot',  name:'Морква',   emoji:'🥕', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
@@ -982,10 +1055,7 @@
     {id:'bayleaf', name:'Лавровий лист',  emoji:'🍃', cat:'spice', season:null, rare:false, price:2, bonus:0.04},
     {id:'vinegar', name:'Оцет',           emoji:'🧪', cat:'spice', season:null, rare:false, price:3, bonus:0.05}
   ];
-  function findIngredient(id){
-    for(var i=0;i<INGREDIENTS.length;i++){ if(INGREDIENTS[i].id === id) return INGREDIENTS[i]; }
-    return null;
-  }
+  function findIngredient(id){ for(var i=0;i<INGREDIENTS.length;i++){ if(INGREDIENTS[i].id === id) return INGREDIENTS[i]; } return null; }
   var SEASON_EMOJI = {'Зима':'❄️','Весна':'🌱','Літо':'☀️','Осінь':'🍂'};
   function currentSeason(){
     var m = new Date().getMonth();
@@ -1004,7 +1074,11 @@
     inventory: { cucumber:4, tomato:4, salt:3, pepper:2 },
     selectedRecipe: { mainId:null, spiceId:null },
     upgrades: {},
-    cellar: []
+    cellar: [],
+    ownedKeys: { standard:true },
+    activeKeyId: 'standard',
+    ownedSkins: { classic:true },
+    jarSkin: 'classic'
   };
 
   try{
@@ -1019,8 +1093,14 @@
       state.cellar = saved.cellar || [];
       state.energy = (typeof saved.energy === 'number') ? saved.energy : ENERGY_BASE_MAX;
       state.keyDurability = (typeof saved.keyDurability === 'number') ? saved.keyDurability : KEY_BASE_DURABILITY;
+      state.ownedKeys = saved.ownedKeys || { standard:true };
+      state.activeKeyId = saved.activeKeyId || 'standard';
+      state.ownedSkins = saved.ownedSkins || { classic:true };
+      state.jarSkin = saved.jarSkin || 'classic';
     }
   }catch(e){}
+
+  applySkin(state.jarSkin);
 
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
@@ -1041,7 +1121,6 @@
     }
   }
 
-  // ---------- elements ----------
   var capsValueEl = document.getElementById('capsValue');
   var capsValueTopEl = document.getElementById('capsValueTop');
   var jarsValueEl = document.getElementById('jarsValue');
@@ -1061,6 +1140,7 @@
   var keyOverlayEl = document.getElementById('keyOverlay');
   var jarStageEl = document.getElementById('jarStage');
   var recipeLineEl = document.getElementById('recipeLine');
+  var keyLineEl = document.getElementById('keyLine');
   var cellarBannerEl = document.getElementById('cellarBanner');
   var cellarMainEl = document.getElementById('cellarMain');
   var cellarSubEl = document.getElementById('cellarSub');
@@ -1068,7 +1148,6 @@
   var toastTimer = null;
   var comboBadgeTimer = null;
 
-  // ---------- build the 8 tap points around the lid ----------
   var pointEls = [];
   (function buildPoints(){
     for(var i=0;i<POINTS_COUNT;i++){
@@ -1099,28 +1178,25 @@
     var py = 58 + 24*Math.sin(angle);
     return { x: px/260*100, y: py/260*100 };
   }
-
   function moveWrenchTo(i){
     var p = pointPos(i);
     wrenchEl.style.left = p.x + '%';
     wrenchEl.style.top = p.y + '%';
   }
 
-  // ---------- jar / sequence state ----------
   var jar = {
     active: false,
     sequenceIndex: 0,
     missesThisJar: 0,
     comboThisJar: 0,
     recipeMult: 1,
-    recipeLabel: 'Звичайна закрутка'
+    recipeLabel: 'Звичайна закрутка',
+    isAuto: false
   };
   var activeTimer = null;
   var screenIsTap = false;
 
-  function clearDotClasses(){
-    pointEls.forEach(function(el){ el.classList.remove('active','hit','miss'); });
-  }
+  function clearDotClasses(){ pointEls.forEach(function(el){ el.classList.remove('active','hit','miss'); }); }
 
   function fmtTime(ms){
     if(ms < 0) ms = 0;
@@ -1134,15 +1210,15 @@
     var now = Date.now();
     var pending = state.cellar.filter(function(e){ return e.readyAt > now; });
     var ready = state.cellar.filter(function(e){ return e.readyAt <= now; });
-    var readySum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
+    var sum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
 
     if(state.cellar.length === 0){
       cellarMainEl.textContent = 'Льох порожній';
       cellarSubEl.textContent = 'Закручені банки визрівають тут перед продажем';
       return;
     }
-    if(readySum > 0){
-      cellarMainEl.textContent = '🧊 Готово: ' + ready.length + ' банок (+' + readySum + ' кришок)';
+    if(sum > 0){
+      cellarMainEl.textContent = '🧊 Готово: ' + ready.length + ' банок (+' + sum + ' кришок)';
       cellarSubEl.textContent = 'Тисни, щоб забрати';
     } else {
       var nearest = pending.reduce(function(m,e){ return Math.min(m, e.readyAt-now); }, Infinity);
@@ -1154,12 +1230,12 @@
   cellarBannerEl.addEventListener('click', function(){
     var now = Date.now();
     var ready = state.cellar.filter(function(e){ return e.readyAt <= now; });
-    var readySum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
-    if(readySum > 0){
+    var sum = ready.reduce(function(s,e){ return s+e.reward; }, 0);
+    if(sum > 0){
       state.cellar = state.cellar.filter(function(e){ return e.readyAt > now; });
-      state.caps += readySum;
+      state.caps += sum;
       save(); render();
-      showToast('Забрано ' + readySum + ' кришок 🧂');
+      showToast('Забрано ' + sum + ' кришок 🧂');
       if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
       return;
     }
@@ -1177,18 +1253,26 @@
     capsValueEl.textContent = state.caps;
     capsValueTopEl.textContent = state.caps;
     jarsValueEl.textContent = state.jarsSealed;
-    keyValueEl.textContent = state.keyDurability + '/' + keyMaxDurability();
+
+    var kt = activeKeyType();
+    if(kt.auto){
+      keyValueEl.textContent = '∞';
+      keyFillEl.style.width = '100%';
+      keyFillEl.classList.remove('low');
+      keyTextEl.textContent = '∞';
+    } else {
+      var kmax = keyMaxDurability();
+      keyValueEl.textContent = state.keyDurability + '/' + kmax;
+      var kpct = Math.round((state.keyDurability / kmax) * 100);
+      keyFillEl.style.width = kpct + '%';
+      keyTextEl.textContent = state.keyDurability + '/' + kmax;
+    }
 
     var cap = maxEnergy();
     var epct = Math.round((state.energy / cap) * 100);
     energyFillEl.style.width = epct + '%';
     energyTextEl.textContent = Math.floor(state.energy) + '/' + cap;
     if(epct <= 20){ energyFillEl.classList.add('low'); } else { energyFillEl.classList.remove('low'); }
-
-    var kmax = keyMaxDurability();
-    var kpct = Math.round((state.keyDurability / kmax) * 100);
-    keyFillEl.style.width = kpct + '%';
-    keyTextEl.textContent = state.keyDurability + '/' + kmax;
 
     var level = 1 + Math.floor(state.caps / XP_PER_LEVEL);
     var xpInLevel = state.caps % XP_PER_LEVEL;
@@ -1197,6 +1281,7 @@
     levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
 
     recipeLineEl.innerHTML = 'Рецепт: <b>' + jar.recipeLabel + '</b>' + (jar.recipeMult > 1 ? ' (+' + Math.round((jar.recipeMult-1)*100) + '%)' : '');
+    keyLineEl.textContent = 'Ключ: ' + kt.emoji + ' ' + kt.name;
 
     renderCellarBanner();
   }
@@ -1210,19 +1295,16 @@
     document.body.appendChild(el);
     setTimeout(function(){ el.remove(); }, 800);
   }
-
   function stageCenterClient(){
     var r = jarStageEl.getBoundingClientRect();
     return { x: r.left + r.width/2 - 10, y: r.top + r.height/2 - 10 };
   }
-
   function showToast(text){
     clearTimeout(toastTimer);
     toastEl.textContent = text;
     toastEl.classList.add('show');
     toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, 1500);
   }
-
   function showComboBadge(n){
     if(n < 2){ comboBadgeEl.classList.remove('show'); return; }
     comboBadgeEl.textContent = 'Комбо x' + n;
@@ -1231,7 +1313,6 @@
     comboBadgeTimer = setTimeout(function(){ comboBadgeEl.classList.remove('show'); }, 900);
   }
 
-  // ---------- recipe helpers ----------
   function currentRecipeInfo(){
     var r = state.selectedRecipe;
     if(!r || !r.mainId || !r.spiceId) return null;
@@ -1241,7 +1322,6 @@
     return { main:main, spice:spice, mult: 1 + main.bonus + spice.bonus };
   }
 
-  // ---------- core sequence flow ----------
   function activatePoint(i){
     clearTimeout(activeTimer);
     clearDotClasses();
@@ -1258,7 +1338,7 @@
   }
 
   function onDotTap(i){
-    if(!jar.active) return;
+    if(!jar.active || jar.isAuto) return;
     if(i !== jar.sequenceIndex) return;
     var pt = pointEls[i];
     if(!pt.classList.contains('active')) return;
@@ -1275,14 +1355,9 @@
       jar.comboThisJar++;
       showComboBadge(jar.comboThisJar);
       if(tg && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-
       var next = i + 1;
-      if(next >= POINTS_COUNT){
-        sealJar();
-      } else {
-        jar.sequenceIndex = next;
-        setTimeout(function(){ if(jar.active) activatePoint(next); }, 110);
-      }
+      if(next >= POINTS_COUNT){ sealJar(); }
+      else { jar.sequenceIndex = next; setTimeout(function(){ if(jar.active) activatePoint(next); }, 110); }
       return;
     }
 
@@ -1301,20 +1376,13 @@
       hintEl.textContent = 'Ключ зламався — потрібен новий';
       return;
     }
-
-    if(jar.missesThisJar >= maxMissesPerJar()){
-      ruinLid();
-      return;
-    }
-
+    if(jar.missesThisJar >= maxMissesPerJar()){ ruinLid(); return; }
     hintEl.textContent = 'Промах! Спробуй ще раз ту саму точку';
     setTimeout(function(){ if(jar.active) activatePoint(i); }, 260);
   }
 
   function ruinLid(){
-    jar.missesThisJar = 0;
-    jar.comboThisJar = 0;
-    jar.sequenceIndex = 0;
+    jar.missesThisJar = 0; jar.comboThisJar = 0; jar.sequenceIndex = 0;
     clearDotClasses();
     showToast('Кришка зіпсована! Беремо нову 🫙');
     hintEl.textContent = 'Нова кришка — починаємо закрутку заново';
@@ -1324,9 +1392,12 @@
   function sealJar(){
     jar.active = false;
     clearDotClasses();
-    var perfect = jar.missesThisJar === 0;
-    var comboBonus = 1 + Math.min(1.4, jar.comboThisJar * 0.05);
-    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult);
+    jarStageEl.classList.remove('auto-mode');
+    wrenchEl.style.opacity = '1';
+
+    var perfect = (!jar.isAuto) && jar.missesThisJar === 0;
+    var comboBonus = jar.isAuto ? 1 : (1 + Math.min(1.4, jar.comboThisJar * 0.05));
+    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult * activeKeyType().rewardMult);
 
     state.cellar.push({ readyAt: Date.now() + sterilizeMs(), reward: reward, label: jar.recipeLabel });
     state.jarsSealed += 1;
@@ -1368,12 +1439,23 @@
 
     save();
     render();
+
     jar.active = true;
     jar.sequenceIndex = 0;
     jar.missesThisJar = 0;
     jar.comboThisJar = 0;
     clearDotClasses();
-    activatePoint(0);
+
+    if(activeKeyType().auto){
+      jar.isAuto = true;
+      jarStageEl.classList.add('auto-mode');
+      wrenchEl.style.opacity = '0';
+      hintEl.textContent = 'Автоключ сам закручує банку...';
+      setTimeout(function(){ if(jar.active && jar.isAuto) sealJar(); }, AUTO_JAR_MS);
+    } else {
+      jar.isAuto = false;
+      activatePoint(0);
+    }
   }
 
   document.getElementById('newKeyBtn').addEventListener('click', function(){
@@ -1385,7 +1467,6 @@
     activatePoint(jar.sequenceIndex);
   });
 
-  // ---------- ticking loop (energy/key regen + cellar countdown) ----------
   setInterval(function(){
     regenEnergy();
     render();
@@ -1395,7 +1476,6 @@
     }
   }, 700);
 
-  // ---------- ingredients screen ----------
   var invGridEl = document.getElementById('invGrid');
   var shopGridEl = document.getElementById('shopGrid');
   var invEmptyHintEl = document.getElementById('invEmptyHint');
@@ -1424,9 +1504,7 @@
       tile.addEventListener('click', function(){
         if(item.cat === 'spice'){ state.selectedRecipe.spiceId = item.id; }
         else { state.selectedRecipe.mainId = item.id; }
-        save();
-        renderIngrScreen();
-        render();
+        save(); renderIngrScreen(); render();
         if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
       });
       invGridEl.appendChild(tile);
@@ -1443,9 +1521,7 @@
           if(state.caps < item.price){ showToast('Не вистачає кришок 🥫'); return; }
           state.caps -= item.price;
           state.inventory[item.id] = (state.inventory[item.id]||0) + 1;
-          save();
-          render();
-          renderIngrScreen();
+          save(); render(); renderIngrScreen();
           showToast('Куплено: ' + item.name + ' ' + item.emoji);
           if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         });
@@ -1460,8 +1536,7 @@
     slotSpiceEl.innerHTML = '<span class="se">' + (spice ? spice.emoji : '🧂') + '</span><span>' + (spice ? spice.name : 'Спеція: не обрано') + '</span>';
 
     if(main && spice){
-      var bonusPct = Math.round((main.bonus + spice.bonus) * 100);
-      recipeBonusLineEl.textContent = 'Бонус до нагороди за банку: +' + bonusPct + '%';
+      recipeBonusLineEl.textContent = 'Бонус до нагороди за банку: +' + Math.round((main.bonus + spice.bonus) * 100) + '%';
     } else {
       recipeBonusLineEl.textContent = 'Оберіть інгредієнт і спецію в інвентарі нижче';
     }
@@ -1469,16 +1544,15 @@
 
   document.getElementById('resetRecipeBtn').addEventListener('click', function(){
     state.selectedRecipe = { mainId:null, spiceId:null };
-    save();
-    renderIngrScreen();
-    render();
+    save(); renderIngrScreen(); render();
     showToast('Рецепт скинуто — звичайна закрутка');
   });
 
-  // ---------- upgrades screen ----------
   var upgradesListEl = document.getElementById('upgradesList');
+  var keysListEl = document.getElementById('keysList');
+  var skinsGridEl = document.getElementById('skinsGrid');
 
-  function upgradeEffectLine(def, level){
+  function upgradeEffectLine(def){
     if(def.id === 'keyDura') return 'Зараз: ' + keyMaxDurability() + ' міцності';
     if(def.id === 'lidTolerance') return 'Зараз: ' + maxMissesPerJar() + ' промахи дозволено';
     if(def.id === 'reflexTime') return 'Зараз: ' + activeWindowMs() + ' мс на точку';
@@ -1500,18 +1574,53 @@
         '<div class="upgr-info">' +
           '<div class="upgr-name">' + def.name + '</div>' +
           '<div class="upgr-desc">' + def.desc + '</div>' +
-          '<div class="upgr-level">Рівень ' + level + '/' + def.maxLevel + ' · ' + upgradeEffectLine(def, level) + '</div>' +
+          '<div class="upgr-level">Рівень ' + level + '/' + def.maxLevel + ' · ' + upgradeEffectLine(def) + '</div>' +
         '</div>' +
         '<div class="upgr-buy">' +
           '<button class="cta-btn small" ' + (maxed ? 'disabled' : '') + '>' + (maxed ? 'МАКС' : 'Покращити') + '</button>' +
           (maxed ? '' : '<div class="cost"><span class="cap-icon" style="width:10px;height:10px;"></span>' + cost + '</div>') +
         '</div>';
-      if(!maxed){
-        card.querySelector('button').addEventListener('click', function(){
-          buyUpgrade(def);
-        });
-      }
+      if(!maxed){ card.querySelector('button').addEventListener('click', function(){ buyUpgrade(def); }); }
       upgradesListEl.appendChild(card);
+    });
+
+    keysListEl.innerHTML = '';
+    KEY_TYPES.forEach(function(def){
+      var owned = !!state.ownedKeys[def.id];
+      var equipped = state.activeKeyId === def.id;
+      var card = document.createElement('div');
+      card.className = 'upgr-card' + (equipped ? ' equipped' : '');
+      var statsLine = def.auto
+        ? 'Авторежим · нагорода x' + def.rewardMult
+        : 'Міцність x' + def.durMult + ' · час x' + def.winMult + ' · нагорода x' + def.rewardMult;
+      var btnLabel = equipped ? 'Екіпіровано' : (owned ? 'Екіпірувати' : 'Купити');
+      card.innerHTML =
+        '<div class="ue">' + def.emoji + '</div>' +
+        '<div class="upgr-info">' +
+          '<div class="upgr-name">' + def.name + '</div>' +
+          '<div class="upgr-desc">' + def.desc + '</div>' +
+          '<div class="upgr-level">' + statsLine + '</div>' +
+        '</div>' +
+        '<div class="upgr-buy">' +
+          '<button class="cta-btn small" ' + (equipped ? 'disabled' : '') + '>' + btnLabel + '</button>' +
+          (!owned ? '<div class="cost"><span class="cap-icon" style="width:10px;height:10px;"></span>' + def.price + '</div>' : '') +
+        '</div>';
+      if(!equipped){ card.querySelector('button').addEventListener('click', function(){ handleKeyAction(def); }); }
+      keysListEl.appendChild(card);
+    });
+
+    skinsGridEl.innerHTML = '';
+    JAR_SKINS.forEach(function(def){
+      var owned = !!state.ownedSkins[def.id];
+      var equipped = state.jarSkin === def.id;
+      var tile = document.createElement('div');
+      tile.className = 'skin-tile' + (equipped ? ' equipped' : '');
+      tile.innerHTML =
+        '<div class="dot" style="background:' + def.glass + ';"></div>' +
+        '<span class="sn">' + def.name + '</span>' +
+        (equipped ? '<span class="sp">Обрано</span>' : (owned ? '<span class="sp">Обрати</span>' : '<span class="sp"><span class="cap-icon" style="width:9px;height:9px;"></span> ' + def.price + '</span>'));
+      tile.addEventListener('click', function(){ handleSkinAction(def); });
+      skinsGridEl.appendChild(tile);
     });
   }
 
@@ -1522,18 +1631,39 @@
     if(state.caps < cost){ showToast('Не вистачає кришок 🥫'); return; }
     state.caps -= cost;
     state.upgrades[def.id] = level + 1;
-
     if(def.id === 'keyDura'){ state.keyDurability = Math.min(keyMaxDurability(), state.keyDurability + def.step); }
     if(def.id === 'energyMax'){ state.energy = Math.min(maxEnergy(), state.energy + def.step); }
-
-    save();
-    render();
-    renderUpgradesScreen();
+    save(); render(); renderUpgradesScreen();
     showToast(def.name + ' покращено! 🛠️');
     if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
   }
 
-  // ---------- navigation ----------
+  function handleKeyAction(def){
+    if(!state.ownedKeys[def.id]){
+      if(state.caps < def.price){ showToast('Не вистачає кришок 🥫'); return; }
+      state.caps -= def.price;
+      state.ownedKeys[def.id] = true;
+      showToast('Придбано: ' + def.name + ' ' + def.emoji);
+    }
+    state.activeKeyId = def.id;
+    state.keyDurability = Math.min(state.keyDurability, keyMaxDurability());
+    save(); render(); renderUpgradesScreen();
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+  }
+
+  function handleSkinAction(def){
+    if(!state.ownedSkins[def.id]){
+      if(state.caps < def.price){ showToast('Не вистачає кришок 🥫'); return; }
+      state.caps -= def.price;
+      state.ownedSkins[def.id] = true;
+      showToast('Придбано скін: ' + def.name);
+    }
+    state.jarSkin = def.id;
+    applySkin(def.id);
+    save(); render(); renderUpgradesScreen();
+    if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+  }
+
   var screenHome = document.getElementById('screen-home');
   var screenTap = document.getElementById('screen-tap');
   var screenIngr = document.getElementById('screen-ingr');
@@ -1593,13 +1723,8 @@
       showToast(el.getAttribute('data-soon') + ' — скоро буде 🚧');
     });
   });
-
-  document.getElementById('profileBtn').addEventListener('click', function(){
-    showToast('Профіль — скоро буде 🚧');
-  });
-  document.getElementById('settingsBtn').addEventListener('click', function(){
-    showToast('Налаштування — скоро буде 🚧');
-  });
+  document.getElementById('profileBtn').addEventListener('click', function(){ showToast('Профіль — скоро буде 🚧'); });
+  document.getElementById('settingsBtn').addEventListener('click', function(){ showToast('Налаштування — скоро буде 🚧'); });
 
   render();
 })();
