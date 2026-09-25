@@ -192,6 +192,14 @@
     cursor:pointer;
   }
   .cta-btn:active{ transform:scale(.97); }
+  .cta-btn:disabled{ opacity:.4; }
+  .cta-btn.ghost{
+    background:var(--panel);
+    color:var(--text);
+    border:1px solid var(--panel-border);
+    padding:8px 16px;
+    font-size:12px;
+  }
 
   .section-label{
     font-size:11px;
@@ -245,6 +253,7 @@
     display:flex;align-items:center;justify-content:center;
     font-size:18px;
     cursor:pointer;
+    flex-shrink:0;
   }
   .stats-row{
     display:flex;
@@ -277,6 +286,14 @@
     justify-content:center;
     gap:4px;
   }
+  .recipe-line{
+    width:100%;
+    text-align:center;
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .recipe-line b{ color:var(--accent-2); font-weight:700; }
   .tap-main{
     flex:1;
     width:100%;
@@ -424,6 +441,117 @@
     100%{transform:translateY(-70px) scale(1);opacity:0;}
   }
 
+  /* ---- INGREDIENTS SCREEN ---- */
+  .season-banner{
+    background:linear-gradient(120deg,#2d4530,#243527);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:12px 14px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .season-banner .emoji{ font-size:26px; }
+  .season-banner .st{ font-weight:800; font-size:14px; }
+  .season-banner .ss{ font-size:11.5px; color:var(--text-dim); }
+
+  .recipe-card{
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:16px;
+  }
+  .recipe-slots{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin:10px 0;
+  }
+  .recipe-slot{
+    flex:1;
+    background:var(--panel-2);
+    border:1px dashed var(--panel-border);
+    border-radius:12px;
+    padding:10px 6px;
+    text-align:center;
+    font-size:11px;
+    color:var(--text-dim);
+    min-height:56px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+  }
+  .recipe-slot .se{ font-size:22px; }
+  .recipe-slot.filled{ border-style:solid; border-color:var(--accent-2); color:var(--text); }
+  .recipe-plus{ font-size:16px; color:var(--text-dim); }
+  .recipe-bonus{
+    text-align:center;
+    font-size:12px;
+    color:var(--accent-2);
+    font-weight:700;
+    margin-bottom:8px;
+  }
+  .recipe-actions{ display:flex; justify-content:center; gap:8px; }
+
+  .ingr-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .ingr-tile{
+    position:relative;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:10px 4px 8px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    cursor:pointer;
+    text-align:center;
+  }
+  .ingr-tile:active{ transform:scale(.95); }
+  .ingr-tile.selected{ border-color:var(--accent-2); box-shadow:0 0 0 1px var(--accent-2) inset; }
+  .ingr-tile .se{ font-size:22px; }
+  .ingr-tile .sn{ font-size:9.5px; color:var(--text-dim); line-height:1.2; }
+  .ingr-tile .badge{
+    position:absolute; top:-6px; right:-6px;
+    background:var(--accent);
+    color:#12200f;
+    font-size:10px;
+    font-weight:800;
+    border-radius:10px;
+    padding:1px 5px;
+    min-width:16px;
+  }
+  .ingr-tile .price-badge{
+    position:absolute; top:-6px; right:-6px;
+    background:var(--panel-2);
+    border:1px solid var(--panel-border);
+    color:var(--accent-2);
+    font-size:9px;
+    font-weight:800;
+    border-radius:10px;
+    padding:1px 5px;
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
+  .ingr-tile.rare{ background:linear-gradient(160deg,#2d3f26,var(--panel)); }
+  .empty-hint{
+    font-size:12px;
+    color:var(--text-dim);
+    text-align:center;
+    padding:10px 0 4px;
+  }
+
   /* ---------- BOTTOM NAV ---------- */
   .bottom-nav{
     height:var(--nav-h);
@@ -549,8 +677,7 @@
           <span class="emoji">⚔️</span>
           <span class="label">Арена</span>
         </div>
-        <div class="quick-card" data-soon="Інгредієнти">
-          <span class="soon-dot"></span>
+        <div class="quick-card" id="ingrCard">
           <span class="emoji">🧄</span>
           <span class="label">Інгредієнти</span>
         </div>
@@ -598,6 +725,8 @@
           <div class="stat-value"><span id="keyValue">20/20</span></div>
         </div>
       </div>
+
+      <div class="recipe-line" id="recipeLine">Рецепт: <b>Звичайна закрутка</b></div>
 
       <div class="tap-main">
         <div class="combo-badge" id="comboBadge">Комбо x2</div>
@@ -652,6 +781,48 @@
       </div>
     </div>
 
+    <!-- INGREDIENTS -->
+    <div class="screen" id="screen-ingr">
+      <div class="tap-topline">
+        <button class="back-btn" id="backBtnIngr">←</button>
+        <div style="font-weight:800;font-size:14px;">Інгредієнти та рецепти</div>
+      </div>
+
+      <div class="season-banner">
+        <span class="emoji" id="seasonEmoji">☀️</span>
+        <div>
+          <div class="st" id="seasonTitle">Зараз: Літо</div>
+          <div class="ss">Асортимент крамниці змінюється разом з порою року</div>
+        </div>
+      </div>
+
+      <div class="recipe-card">
+        <div class="section-label" style="margin:0 0 4px;">Твій рецепт закрутки</div>
+        <div class="recipe-slots">
+          <div class="recipe-slot" id="slotMain">
+            <span class="se">🥫</span>
+            <span>Основа: не обрано</span>
+          </div>
+          <div class="recipe-plus">+</div>
+          <div class="recipe-slot" id="slotSpice">
+            <span class="se">🧂</span>
+            <span>Спеція: не обрано</span>
+          </div>
+        </div>
+        <div class="recipe-bonus" id="recipeBonusLine">Оберіть інгредієнт і спецію в інвентарі нижче</div>
+        <div class="recipe-actions">
+          <button class="cta-btn ghost" id="resetRecipeBtn">Скинути рецепт</button>
+        </div>
+      </div>
+
+      <div class="section-label">Твій інвентар (тисни, щоб обрати)</div>
+      <div class="ingr-grid" id="invGrid"></div>
+      <div class="empty-hint" id="invEmptyHint" style="display:none;">Інвентар порожній — купуй продукти нижче</div>
+
+      <div class="section-label">Сезонна крамниця</div>
+      <div class="ingr-grid" id="shopGrid"></div>
+    </div>
+
   </div>
 
   <div class="toast" id="toast"></div>
@@ -666,7 +837,7 @@
     <button class="nav-btn primary" id="navBanky">
       <span class="nav-emoji">🫙</span>Банки
     </button>
-    <button class="nav-btn" data-soon="Інгредієнти">
+    <button class="nav-btn" id="navIngr">
       <span class="nav-emoji">🧄</span>Інгред.
     </button>
     <button class="nav-btn" data-soon="Рейтинги">
@@ -689,7 +860,7 @@
     }catch(e){}
   }
 
-  var STORAGE_KEY = 'zakrutqi_state_v2';
+  var STORAGE_KEY = 'zakrutqi_state_v3';
   var MAX_ENERGY = 100;
   var REGEN_MS_PER_POINT = 600; // 1 energy per 0.6s -> full refill in 60s
   var XP_PER_LEVEL = 500;
@@ -701,12 +872,59 @@
   var ENERGY_COST_PER_JAR = 10;
   var BASE_REWARD = 6;
 
+  // ---------- ingredient catalog ----------
+  var INGREDIENTS = [
+    // Зима
+    {id:'cabbage', name:'Капуста',  emoji:'🥬', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
+    {id:'carrot',  name:'Морква',   emoji:'🥕', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
+    {id:'potato',  name:'Картопля', emoji:'🥔', cat:'main', season:'Зима', rare:false, price:3,  bonus:0.07},
+    {id:'beet',    name:'Буряк',    emoji:'🍠', cat:'main', season:'Зима', rare:false, price:4,  bonus:0.08},
+    {id:'pumpkin', name:'Гарбуз',   emoji:'🎃', cat:'main', season:'Зима', rare:true,  price:12, bonus:0.2},
+    // Весна
+    {id:'garlic',  name:'Часник',   emoji:'🧄', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
+    {id:'dill',    name:'Кріп',     emoji:'🌿', cat:'main', season:'Весна', rare:false, price:3,  bonus:0.07},
+    {id:'spinach', name:'Шпинат',   emoji:'🥦', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
+    {id:'radish',  name:'Редиска',  emoji:'🌷', cat:'main', season:'Весна', rare:false, price:4,  bonus:0.08},
+    {id:'asparagus', name:'Спаржа', emoji:'🎍', cat:'main', season:'Весна', rare:true,  price:12, bonus:0.2},
+    // Літо
+    {id:'cucumber', name:'Огірок',  emoji:'🥒', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
+    {id:'tomato',   name:'Помідор', emoji:'🍅', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
+    {id:'bellpepper', name:'Перець', emoji:'🫑', cat:'main', season:'Літо', rare:false, price:4,  bonus:0.08},
+    {id:'strawberry', name:'Полуниця', emoji:'🍓', cat:'main', season:'Літо', rare:true, price:12, bonus:0.2},
+    {id:'raspberry', name:'Малина', emoji:'🫐', cat:'main', season:'Літо', rare:true,  price:12, bonus:0.2},
+    // Осінь
+    {id:'apple',   name:'Яблуко',   emoji:'🍎', cat:'main', season:'Осінь', rare:false, price:4,  bonus:0.08},
+    {id:'pear',    name:'Груша',    emoji:'🍐', cat:'main', season:'Осінь', rare:false, price:4,  bonus:0.08},
+    {id:'mushroom',name:'Гриби',    emoji:'🍄', cat:'main', season:'Осінь', rare:false, price:5,  bonus:0.09},
+    {id:'grape',   name:'Виноград', emoji:'🍇', cat:'main', season:'Осінь', rare:true,  price:12, bonus:0.2},
+    // Спеції (завжди в крамниці)
+    {id:'salt',    name:'Сіль',           emoji:'🧂', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
+    {id:'pepper',  name:'Перець мелений', emoji:'🌶️', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
+    {id:'sugar',   name:'Цукор',          emoji:'🍥', cat:'spice', season:null, rare:false, price:2, bonus:0.03},
+    {id:'bayleaf', name:'Лавровий лист',  emoji:'🍃', cat:'spice', season:null, rare:false, price:2, bonus:0.04},
+    {id:'vinegar', name:'Оцет',           emoji:'🧪', cat:'spice', season:null, rare:false, price:3, bonus:0.05}
+  ];
+  function findIngredient(id){
+    for(var i=0;i<INGREDIENTS.length;i++){ if(INGREDIENTS[i].id === id) return INGREDIENTS[i]; }
+    return null;
+  }
+  var SEASON_EMOJI = {'Зима':'❄️','Весна':'🌱','Літо':'☀️','Осінь':'🍂'};
+  function currentSeason(){
+    var m = new Date().getMonth();
+    if(m===11||m===0||m===1) return 'Зима';
+    if(m>=2&&m<=4) return 'Весна';
+    if(m>=5&&m<=7) return 'Літо';
+    return 'Осінь';
+  }
+
   var state = {
     caps: 0,
     jarsSealed: 0,
     energy: MAX_ENERGY,
     lastRegenTs: Date.now(),
-    keyDurability: KEY_MAX_DURABILITY
+    keyDurability: KEY_MAX_DURABILITY,
+    inventory: { cucumber:4, tomato:4, salt:3, pepper:2 },
+    selectedRecipe: { mainId:null, spiceId:null }
   };
 
   try{
@@ -717,6 +935,8 @@
       state.energy = (typeof saved.energy === 'number') ? saved.energy : MAX_ENERGY;
       state.lastRegenTs = saved.lastRegenTs || Date.now();
       state.keyDurability = (typeof saved.keyDurability === 'number') ? saved.keyDurability : KEY_MAX_DURABILITY;
+      state.inventory = saved.inventory || state.inventory;
+      state.selectedRecipe = saved.selectedRecipe || { mainId:null, spiceId:null };
     }
   }catch(e){}
 
@@ -757,6 +977,7 @@
   var wrenchEl = document.getElementById('wrenchIcon');
   var keyOverlayEl = document.getElementById('keyOverlay');
   var jarStageEl = document.getElementById('jarStage');
+  var recipeLineEl = document.getElementById('recipeLine');
 
   var toastTimer = null;
   var comboBadgeTimer = null;
@@ -804,7 +1025,9 @@
     active: false,
     sequenceIndex: 0,
     missesThisJar: 0,
-    comboThisJar: 0
+    comboThisJar: 0,
+    recipeMult: 1,
+    recipeLabel: 'Звичайна закрутка'
   };
   var activeTimer = null;
   var screenIsTap = false;
@@ -833,6 +1056,8 @@
     levelLabelEl.textContent = 'Рівень ' + level;
     levelXpLabelEl.textContent = xpInLevel + '/' + XP_PER_LEVEL;
     levelFillEl.style.width = Math.round((xpInLevel / XP_PER_LEVEL) * 100) + '%';
+
+    recipeLineEl.innerHTML = 'Рецепт: <b>' + jar.recipeLabel + '</b>' + (jar.recipeMult > 1 ? ' (+' + Math.round((jar.recipeMult-1)*100) + '%)' : '');
   }
 
   function spawnFloatPop(text, xClient, yClient){
@@ -863,6 +1088,16 @@
     comboBadgeEl.classList.add('show');
     clearTimeout(comboBadgeTimer);
     comboBadgeTimer = setTimeout(function(){ comboBadgeEl.classList.remove('show'); }, 900);
+  }
+
+  // ---------- recipe helpers ----------
+  function currentRecipeInfo(){
+    var r = state.selectedRecipe;
+    if(!r || !r.mainId || !r.spiceId) return null;
+    var main = findIngredient(r.mainId), spice = findIngredient(r.spiceId);
+    if(!main || !spice) return null;
+    if((state.inventory[r.mainId]||0) <= 0 || (state.inventory[r.spiceId]||0) <= 0) return null;
+    return { main:main, spice:spice, mult: 1 + main.bonus + spice.bonus };
   }
 
   // ---------- core sequence flow ----------
@@ -950,7 +1185,7 @@
     clearDotClasses();
     var perfect = jar.missesThisJar === 0;
     var comboBonus = 1 + Math.min(1.4, jar.comboThisJar * 0.05);
-    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1));
+    var reward = Math.round(BASE_REWARD * comboBonus * (perfect ? 1.5 : 1) * jar.recipeMult);
 
     state.caps += reward;
     state.jarsSealed += 1;
@@ -976,6 +1211,20 @@
       return;
     }
     state.energy -= ENERGY_COST_PER_JAR;
+
+    var info = currentRecipeInfo();
+    if(info){
+      state.inventory[info.main.id] = Math.max(0, (state.inventory[info.main.id]||0) - 1);
+      state.inventory[info.spice.id] = Math.max(0, (state.inventory[info.spice.id]||0) - 1);
+      jar.recipeMult = info.mult;
+      jar.recipeLabel = info.main.name + ' + ' + info.spice.name;
+    } else {
+      var hadRecipeChosen = state.selectedRecipe && (state.selectedRecipe.mainId || state.selectedRecipe.spiceId);
+      if(hadRecipeChosen){ showToast('Інгредієнти закінчились — звичайна закрутка'); }
+      jar.recipeMult = 1;
+      jar.recipeLabel = 'Звичайна закрутка';
+    }
+
     save();
     render();
     jar.active = true;
@@ -1005,33 +1254,130 @@
     }
   }, 700);
 
+  // ---------- ingredients screen ----------
+  var invGridEl = document.getElementById('invGrid');
+  var shopGridEl = document.getElementById('shopGrid');
+  var invEmptyHintEl = document.getElementById('invEmptyHint');
+  var slotMainEl = document.getElementById('slotMain');
+  var slotSpiceEl = document.getElementById('slotSpice');
+  var recipeBonusLineEl = document.getElementById('recipeBonusLine');
+  var seasonEmojiEl = document.getElementById('seasonEmoji');
+  var seasonTitleEl = document.getElementById('seasonTitle');
+
+  function renderIngrScreen(){
+    var season = currentSeason();
+    seasonEmojiEl.textContent = SEASON_EMOJI[season];
+    seasonTitleEl.textContent = 'Зараз: ' + season;
+
+    // inventory
+    invGridEl.innerHTML = '';
+    var anyOwned = false;
+    INGREDIENTS.forEach(function(item){
+      var count = state.inventory[item.id] || 0;
+      if(count <= 0) return;
+      anyOwned = true;
+      var tile = document.createElement('div');
+      tile.className = 'ingr-tile' + (item.rare ? ' rare' : '');
+      var isSelected = (state.selectedRecipe.mainId === item.id) || (state.selectedRecipe.spiceId === item.id);
+      if(isSelected) tile.className += ' selected';
+      tile.innerHTML = '<span class="badge">x' + count + '</span><span class="se">' + item.emoji + '</span><span class="sn">' + item.name + '</span>';
+      tile.addEventListener('click', function(){
+        if(item.cat === 'spice'){ state.selectedRecipe.spiceId = item.id; }
+        else { state.selectedRecipe.mainId = item.id; }
+        save();
+        renderIngrScreen();
+        render();
+        if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+      });
+      invGridEl.appendChild(tile);
+    });
+    invEmptyHintEl.style.display = anyOwned ? 'none' : 'block';
+
+    // shop: spices always + main items matching current season
+    shopGridEl.innerHTML = '';
+    INGREDIENTS.filter(function(item){ return item.cat === 'spice' || item.season === season; })
+      .forEach(function(item){
+        var tile = document.createElement('div');
+        tile.className = 'ingr-tile' + (item.rare ? ' rare' : '');
+        tile.innerHTML = '<span class="price-badge"><span class="cap-icon" style="width:10px;height:10px;"></span>' + item.price + '</span><span class="se">' + item.emoji + '</span><span class="sn">' + item.name + '</span>';
+        tile.addEventListener('click', function(){
+          if(state.caps < item.price){ showToast('Не вистачає кришок 🥫'); return; }
+          state.caps -= item.price;
+          state.inventory[item.id] = (state.inventory[item.id]||0) + 1;
+          save();
+          render();
+          renderIngrScreen();
+          showToast('Куплено: ' + item.name + ' ' + item.emoji);
+          if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        });
+        shopGridEl.appendChild(tile);
+      });
+
+    // recipe slots summary
+    var main = state.selectedRecipe.mainId ? findIngredient(state.selectedRecipe.mainId) : null;
+    var spice = state.selectedRecipe.spiceId ? findIngredient(state.selectedRecipe.spiceId) : null;
+    slotMainEl.className = 'recipe-slot' + (main ? ' filled' : '');
+    slotMainEl.innerHTML = '<span class="se">' + (main ? main.emoji : '🥫') + '</span><span>' + (main ? main.name : 'Основа: не обрано') + '</span>';
+    slotSpiceEl.className = 'recipe-slot' + (spice ? ' filled' : '');
+    slotSpiceEl.innerHTML = '<span class="se">' + (spice ? spice.emoji : '🧂') + '</span><span>' + (spice ? spice.name : 'Спеція: не обрано') + '</span>';
+
+    if(main && spice){
+      var bonusPct = Math.round((main.bonus + spice.bonus) * 100);
+      recipeBonusLineEl.textContent = 'Бонус до нагороди за банку: +' + bonusPct + '%';
+    } else {
+      recipeBonusLineEl.textContent = 'Оберіть інгредієнт і спецію в інвентарі нижче';
+    }
+  }
+
+  document.getElementById('resetRecipeBtn').addEventListener('click', function(){
+    state.selectedRecipe = { mainId:null, spiceId:null };
+    save();
+    renderIngrScreen();
+    render();
+    showToast('Рецепт скинуто — звичайна закрутка');
+  });
+
   // ---------- navigation ----------
   var screenHome = document.getElementById('screen-home');
   var screenTap = document.getElementById('screen-tap');
+  var screenIngr = document.getElementById('screen-ingr');
   var navBanky = document.getElementById('navBanky');
+  var navIngr = document.getElementById('navIngr');
   var backBtn = document.getElementById('backBtn');
+  var backBtnIngr = document.getElementById('backBtnIngr');
   var playCta = document.getElementById('playCta');
+  var ingrCard = document.getElementById('ingrCard');
 
   function showScreen(name){
     screenHome.classList.remove('active');
     screenTap.classList.remove('active');
+    screenIngr.classList.remove('active');
     navBanky.classList.remove('active');
+    navIngr.classList.remove('active');
+    screenIsTap = false;
+
     if(name === 'tap'){
       screenTap.classList.add('active');
       navBanky.classList.add('active');
       screenIsTap = true;
       tryStartJar();
+    } else if(name === 'ingr'){
+      screenIngr.classList.add('active');
+      navIngr.classList.add('active');
+      renderIngrScreen();
     } else {
       screenHome.classList.add('active');
-      screenIsTap = false;
       clearTimeout(activeTimer);
     }
     if(tg && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
   }
 
   navBanky.addEventListener('click', function(){ showScreen('tap'); });
+  navIngr.addEventListener('click', function(){ showScreen('ingr'); });
   playCta.addEventListener('click', function(){ showScreen('tap'); });
+  ingrCard.addEventListener('click', function(){ showScreen('ingr'); });
   backBtn.addEventListener('click', function(){ showScreen('home'); });
+  backBtnIngr.addEventListener('click', function(){ showScreen('home'); });
 
   document.querySelectorAll('[data-soon]').forEach(function(el){
     el.addEventListener('click', function(){
