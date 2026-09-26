@@ -1031,6 +1031,7 @@
   var XP_PER_LEVEL = 500;
 
   var POINTS_COUNT = 8;
+  var REVOLUTIONS_PER_JAR = 10;
   var ENERGY_COST_PER_JAR = 10;
   var BASE_REWARD = 6;
   var AUTO_JAR_MS = 1300;
@@ -1559,7 +1560,7 @@
       jar.recipeLabel = 'Звичайна закрутка';
     }
 
-    jar.revolutions = (info && info.main && info.main.rare) ? 2 : 1;
+    jar.revolutions = REVOLUTIONS_PER_JAR;
     jar.totalSteps = POINTS_COUNT * jar.revolutions;
 
     save();
