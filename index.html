@@ -1911,16 +1911,17 @@
     }
 
     syncProfileToServer(function(syncOk, syncErr){
+      var syncNote = syncOk ? '' : ('Синхронізація профілю: ' + describeServerlessError(syncErr) + '. ');
       tg.Serverless.call('getLeaderboard', { limit: 30 }, function(err, result){
         if(err){
-          rankHintEl.textContent = 'Помилка завантаження рейтингу: ' + describeServerlessError(err);
+          rankHintEl.textContent = syncNote + 'Помилка завантаження рейтингу: ' + describeServerlessError(err);
           return;
         }
         var list = (result && result.leaderboard) || [];
         if(list.length === 0){
-          rankHintEl.textContent = syncOk
+          rankHintEl.textContent = syncNote + (syncOk
             ? 'Рейтинг ще порожній — будь першим!'
-            : 'Рейтинг порожній. Помилка синхронізації профілю: ' + describeServerlessError(syncErr);
+            : 'Рейтинг порожній.');
           return;
         }
         rankHintEl.style.display = 'none';
