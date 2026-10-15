@@ -1912,7 +1912,7 @@
 
     syncProfileToServer(function(syncOk, syncErr){
       var syncNote = syncOk ? '' : ('Синхронізація профілю: ' + describeServerlessError(syncErr) + '. ');
-      tg.Serverless.call('getLeaderboard', { limit: 30 }, function(err, result){
+      tg.Serverless.call('rankingList', { limit: 30 }, function(err, result){
         if(err){
           rankHintEl.textContent = syncNote + 'Помилка завантаження рейтингу: ' + describeServerlessError(err);
           return;
