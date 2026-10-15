@@ -682,6 +682,40 @@
   .skin-tile .sn{ font-size:10px; color:var(--text-dim); }
   .skin-tile .sp{ font-size:9.5px; color:var(--accent-2); font-weight:700; }
 
+  /* ---------- LEADERBOARD ---------- */
+  .rank-summary{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:14px;
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .rank-summary .re{ font-size:28px; }
+  .rank-summary .rt{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.5px; }
+  .rank-summary .rv{ font-size:17px; font-weight:800; }
+  .rank-list{ display:flex; flex-direction:column; gap:6px; }
+  .rank-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel);
+    border:1px solid var(--panel-border);
+    border-radius:12px;
+    padding:9px 12px;
+  }
+  .rank-row.me{ border-color:var(--accent-2); background:rgba(255,202,40,.1); }
+  .rank-pos{ width:22px; font-weight:800; color:var(--text-dim); text-align:center; flex-shrink:0; }
+  .rank-row.top1 .rank-pos{ color:#ffd54a; }
+  .rank-row.top2 .rank-pos{ color:#cfd8dc; }
+  .rank-row.top3 .rank-pos{ color:#d7a06a; }
+  .rank-name{ flex:1; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rank-caps{ font-size:13px; font-weight:800; color:var(--accent-2); display:flex; align-items:center; gap:4px; flex-shrink:0; }
+  .rank-hint{ text-align:center; color:var(--text-dim); font-size:13px; padding:20px 0; }
+  .rank-refresh{ margin:0 0 14px; }
+
   /* ---------- BOTTOM NAV ---------- */
   .bottom-nav{
     height:var(--nav-h);
@@ -815,8 +849,7 @@
           <span class="emoji">🛠️</span>
           <span class="label">Апгрейди</span>
         </div>
-        <div class="quick-card" data-soon="Рейтинги">
-          <span class="soon-dot"></span>
+        <div class="quick-card" id="rankCard">
           <span class="emoji">🏆</span>
           <span class="label">Рейтинги</span>
         </div>
@@ -989,6 +1022,27 @@
       <div class="ingr-grid" id="skinsGrid"></div>
     </div>
 
+    <!-- LEADERBOARD -->
+    <div class="screen" id="screen-rank">
+      <div class="tap-topline">
+        <button class="back-btn" id="backBtnRank">←</button>
+        <div style="font-weight:800;font-size:14px;">Рейтинг гравців</div>
+      </div>
+
+      <div class="rank-summary">
+        <span class="re">🏆</span>
+        <div>
+          <div class="rt">Твоє місце</div>
+          <div class="rv" id="rankMyPos">—</div>
+        </div>
+      </div>
+
+      <button class="cta-btn ghost rank-refresh" id="rankRefreshBtn">Оновити рейтинг</button>
+
+      <div class="rank-list" id="rankList"></div>
+      <div class="rank-hint" id="rankHint">Завантаження рейтингу...</div>
+    </div>
+
   </div>
 
   <div class="toast" id="toast"></div>
@@ -1006,7 +1060,7 @@
     <button class="nav-btn" id="navIngr">
       <span class="nav-emoji">🧄</span>Інгред.
     </button>
-    <button class="nav-btn" data-soon="Рейтинги">
+    <button class="nav-btn" id="navRank">
       <span class="nav-emoji">🏆</span>Рейтинг
     </button>
   </div>
@@ -1803,15 +1857,79 @@
   var screenTap = document.getElementById('screen-tap');
   var screenIngr = document.getElementById('screen-ingr');
   var screenUpgr = document.getElementById('screen-upgr');
+  var screenRank = document.getElementById('screen-rank');
   var navBanky = document.getElementById('navBanky');
   var navIngr = document.getElementById('navIngr');
   var navUpgr = document.getElementById('navUpgr');
+  var navRank = document.getElementById('navRank');
   var backBtn = document.getElementById('backBtn');
   var backBtnIngr = document.getElementById('backBtnIngr');
   var backBtnUpgr = document.getElementById('backBtnUpgr');
+  var backBtnRank = document.getElementById('backBtnRank');
   var playCta = document.getElementById('playCta');
   var ingrCard = document.getElementById('ingrCard');
   var upgrCard = document.getElementById('upgrCard');
+  var rankCard = document.getElementById('rankCard');
+  var rankListEl = document.getElementById('rankList');
+  var rankHintEl = document.getElementById('rankHint');
+  var rankMyPosEl = document.getElementById('rankMyPos');
+  var rankRefreshBtn = document.getElementById('rankRefreshBtn');
+
+  function escapeHtml(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function syncProfileToServer(cb){
+    if(!tg || !tg.Serverless || !tg.Serverless.call){ if(cb) cb(false); return; }
+    try{
+      tg.Serverless.call('syncProfile', { caps: state.caps, jarsSealed: state.jarsSealed }, function(err){
+        if(cb) cb(!err);
+      });
+    }catch(e){ if(cb) cb(false); }
+  }
+
+  function loadLeaderboard(){
+    rankListEl.innerHTML = '';
+    rankMyPosEl.textContent = '—';
+    rankHintEl.style.display = 'block';
+    rankHintEl.textContent = 'Завантаження рейтингу...';
+
+    if(!tg || !tg.Serverless || !tg.Serverless.call){
+      rankHintEl.textContent = 'Рейтинг доступний лише всередині Telegram';
+      return;
+    }
+
+    syncProfileToServer(function(){
+      tg.Serverless.call('getLeaderboard', { limit: 30 }, function(err, result){
+        if(err){
+          rankHintEl.textContent = 'Не вдалося завантажити рейтинг. Спробуй ще раз.';
+          return;
+        }
+        var list = (result && result.leaderboard) || [];
+        if(list.length === 0){
+          rankHintEl.textContent = 'Рейтинг ще порожній — будь першим!';
+          return;
+        }
+        rankHintEl.style.display = 'none';
+        rankMyPosEl.textContent = (result && result.myRank) ? ('#' + result.myRank) : 'поза топ-30';
+
+        var myId = (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) || null;
+        rankListEl.innerHTML = '';
+        list.forEach(function(p, idx){
+          var pos = idx + 1;
+          var row = document.createElement('div');
+          row.className = 'rank-row' + (pos <= 3 ? ' top' + pos : '') + (myId && p.telegramId === myId ? ' me' : '');
+          row.innerHTML =
+            '<div class="rank-pos">' + pos + '</div>' +
+            '<div class="rank-name">' + escapeHtml(p.displayName) + '</div>' +
+            '<div class="rank-caps"><span class="cap-icon" style="width:11px;height:11px;"></span>' + p.caps + '</div>';
+          rankListEl.appendChild(row);
+        });
+      });
+    });
+  }
 
   function showScreen(name){
     if(screenIsTap && name !== 'tap' && jar.starting){
@@ -1823,9 +1941,11 @@
     screenTap.classList.remove('active');
     screenIngr.classList.remove('active');
     screenUpgr.classList.remove('active');
+    screenRank.classList.remove('active');
     navBanky.classList.remove('active');
     navIngr.classList.remove('active');
     navUpgr.classList.remove('active');
+    navRank.classList.remove('active');
     screenIsTap = false;
 
     if(name === 'tap'){
@@ -1841,6 +1961,10 @@
       screenUpgr.classList.add('active');
       navUpgr.classList.add('active');
       renderUpgradesScreen();
+    } else if(name === 'rank'){
+      screenRank.classList.add('active');
+      navRank.classList.add('active');
+      loadLeaderboard();
     } else {
       screenHome.classList.add('active');
       clearTimeout(activeTimer);
@@ -1851,12 +1975,16 @@
   navBanky.addEventListener('click', function(){ showScreen('tap'); });
   navIngr.addEventListener('click', function(){ showScreen('ingr'); });
   navUpgr.addEventListener('click', function(){ showScreen('upgr'); });
+  navRank.addEventListener('click', function(){ showScreen('rank'); });
   playCta.addEventListener('click', function(){ showScreen('tap'); });
   ingrCard.addEventListener('click', function(){ showScreen('ingr'); });
   upgrCard.addEventListener('click', function(){ showScreen('upgr'); });
+  rankCard.addEventListener('click', function(){ showScreen('rank'); });
   backBtn.addEventListener('click', function(){ showScreen('home'); });
   backBtnIngr.addEventListener('click', function(){ showScreen('home'); });
   backBtnUpgr.addEventListener('click', function(){ showScreen('home'); });
+  backBtnRank.addEventListener('click', function(){ showScreen('home'); });
+  rankRefreshBtn.addEventListener('click', function(){ loadLeaderboard(); });
 
   document.querySelectorAll('[data-soon]').forEach(function(el){
     el.addEventListener('click', function(){
