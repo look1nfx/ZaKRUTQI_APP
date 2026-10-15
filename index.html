@@ -1881,13 +1881,22 @@
     });
   }
 
+  function describeServerlessError(err){
+    if(!err) return 'невідома помилка';
+    var parts = [];
+    if(err.type) parts.push(err.type);
+    if(err.message) parts.push(err.message);
+    if(err.parameters){ try{ parts.push(JSON.stringify(err.parameters)); }catch(e){} }
+    return parts.length ? parts.join(' — ') : 'невідома помилка';
+  }
+
   function syncProfileToServer(cb){
-    if(!tg || !tg.Serverless || !tg.Serverless.call){ if(cb) cb(false); return; }
+    if(!tg || !tg.Serverless || !tg.Serverless.call){ if(cb) cb(false, { type:'NO_SERVERLESS', message:'Serverless API недоступний' }); return; }
     try{
       tg.Serverless.call('syncProfile', { caps: state.caps, jarsSealed: state.jarsSealed }, function(err){
-        if(cb) cb(!err);
+        if(cb) cb(!err, err);
       });
-    }catch(e){ if(cb) cb(false); }
+    }catch(e){ if(cb) cb(false, e); }
   }
 
   function loadLeaderboard(){
@@ -1901,15 +1910,17 @@
       return;
     }
 
-    syncProfileToServer(function(){
+    syncProfileToServer(function(syncOk, syncErr){
       tg.Serverless.call('getLeaderboard', { limit: 30 }, function(err, result){
         if(err){
-          rankHintEl.textContent = 'Не вдалося завантажити рейтинг. Спробуй ще раз.';
+          rankHintEl.textContent = 'Помилка завантаження рейтингу: ' + describeServerlessError(err);
           return;
         }
         var list = (result && result.leaderboard) || [];
         if(list.length === 0){
-          rankHintEl.textContent = 'Рейтинг ще порожній — будь першим!';
+          rankHintEl.textContent = syncOk
+            ? 'Рейтинг ще порожній — будь першим!'
+            : 'Рейтинг порожній. Помилка синхронізації профілю: ' + describeServerlessError(syncErr);
           return;
         }
         rankHintEl.style.display = 'none';
